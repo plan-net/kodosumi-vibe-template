@@ -46,6 +46,8 @@ echo Installing development dependencies...
 pip install -e ".[dev]"
 
 REM Install Kodosumi from GitHub
+echo.
+echo NOTE: Kodosumi is not available on PyPI and must be installed from GitHub
 echo Installing Kodosumi from GitHub (dev branch)...
 pip install git+https://github.com/masumi-network/kodosumi.git@dev
 
@@ -56,6 +58,7 @@ if not exist .env (
     echo Please edit .env file with your API keys
 )
 
+echo.
 echo Installation complete!
 echo To activate the environment, run:
 echo venv\Scripts\activate.bat 

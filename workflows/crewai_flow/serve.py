@@ -13,6 +13,12 @@ app = ServeAPI()
 templates = Jinja2Templates(
     directory=Path(__file__).parent.joinpath("templates"))
 
+# Available datasets for the dropdown
+AVAILABLE_DATASETS = {
+    "sales_data": "Quarterly Sales Data",
+    "customer_feedback": "Customer Feedback Survey"
+}
+
 @deployment
 @ingress(app)
 class CrewAIFlowService:
@@ -22,15 +28,18 @@ class CrewAIFlowService:
     """
 
     @app.get("/", 
-             name="CrewAI Flow", 
-             description="Execute a CrewAI flow with the given parameters.")
+             name="Data Analysis Flow", 
+             description="Execute a data analysis flow with the selected dataset.")
     async def get(self, request: Request) -> HTMLResponse:
         """
         Handle GET requests.
         Returns the HTML form for submitting parameters.
         """
         return templates.TemplateResponse(
-            request=request, name="form.html", context={})
+            request=request, 
+            name="form.html", 
+            context={"datasets": AVAILABLE_DATASETS}
+        )
 
     @app.post("/", response_model=None)
     async def post(self, request: Request):
@@ -40,21 +49,17 @@ class CrewAIFlowService:
         """
         form_data = await request.form()
         
-        # Extract parameters from the form
-        # Modify this to match your flow's parameters
-        param1 = str(form_data.get("input_param1", ""))
-        param2 = str(form_data.get("input_param2", ""))
+        # Extract dataset selection from the form
+        dataset_name = str(form_data.get("dataset_name", "sales_data"))
         
-        # Validate parameters
-        if param1.strip() and param2.strip():
-            # Launch the flow with the parameters
-            return Launch(request, "crewai_flow.main:kickoff", {
-                "input_param1": param1,
-                "input_param2": param2
-            })
+        # Validate dataset
+        if dataset_name not in AVAILABLE_DATASETS:
+            dataset_name = "sales_data"  # Default to sales_data if invalid
         
-        # If parameters are invalid, return the form again
-        return await self.get(request)
+        # Launch the flow with the selected dataset
+        return Launch(request, "workflows.crewai_flow.main:kickoff", {
+            "dataset_name": dataset_name
+        })
 
 # Bind the service to Ray Serve
 fast_app = CrewAIFlowService.bind()  # type: ignore 

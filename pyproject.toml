@@ -38,6 +38,9 @@ dependencies = [
     "uvicorn>=0.15.0",
 ]
 
+# Kodosumi must be installed separately from GitHub:
+# pip install git+https://github.com/masumi-network/kodosumi.git@dev
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
@@ -47,9 +50,14 @@ dev = [
     "ruff>=0.0.270",
 ]
 
+# External dependencies that must be installed separately
+[project.external-dependencies]
+kodosumi = {url = "git+https://github.com/masumi-network/kodosumi.git@dev", comment = "Must be installed from GitHub dev branch"}
+
 [project.urls]
 "Homepage" = "https://github.com/yourusername/kodosumi-vibe-template"
 "Bug Tracker" = "https://github.com/yourusername/kodosumi-vibe-template/issues"
+"Kodosumi Repository" = "https://github.com/masumi-network/kodosumi"
 
 [tool.setuptools]
 package-dir = {"" = "."}

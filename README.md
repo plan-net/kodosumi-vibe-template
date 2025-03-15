@@ -61,6 +61,16 @@ template/
 
 ## Installation
 
+### Important Note About Kodosumi
+
+**Kodosumi is not available on PyPI** and must be installed directly from GitHub:
+
+```bash
+pip install git+https://github.com/masumi-network/kodosumi.git@dev
+```
+
+The installation scripts handle this automatically, but if you're installing manually, you'll need to run this command separately.
+
 ### Using Installation Scripts (Recommended)
 
 #### Linux/macOS

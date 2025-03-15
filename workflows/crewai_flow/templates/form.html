@@ -2,25 +2,32 @@
 
 {% block main %}
 
-    <h3>CrewAI Flow</h3>
+    <h3>Data Analysis Flow</h3>
+    <p>Select a dataset to analyze with CrewAI and Ray</p>
     <div class="large"></div>
 
     <form method="POST">
         <div class="field border">
-            <label>Parameter 1</label>
-            <input type="text" name="input_param1" value="" 
-            placeholder="Enter parameter 1"/>
+            <label>Select Dataset</label>
+            <select name="dataset_name">
+                {% for key, value in datasets.items() %}
+                    <option value="{{ key }}">{{ value }}</option>
+                {% endfor %}
+            </select>
         </div>
         <div class="space"></div>
         
-        <div class="field border">
-            <label>Parameter 2</label>
-            <input type="text" name="input_param2" value="" 
-            placeholder="Enter parameter 2"/>
+        <div class="info">
+            <p>This will run a CrewAI flow that:</p>
+            <ol>
+                <li>Analyzes the selected dataset using AI agents</li>
+                <li>Processes insights in parallel using Ray</li>
+                <li>Prioritizes and aggregates the results</li>
+            </ol>
         </div>
         <div class="space"></div>
         
-        <button class="tertiary" type="submit">Submit</button>
+        <button class="tertiary" type="submit">Run Analysis</button>
     </form>
     
 {% endblock %} 

@@ -15,9 +15,7 @@ from pydantic import BaseModel
 from crewai.flow import Flow, listen, start
 
 # Import your crew classes here
-# from crewai_flow.crews.first_crew.first_crew import FirstCrew, FirstCrewOutput
-# from crewai_flow.crews.second_crew.second_crew import SecondCrew
-# from crewai_flow.crews.third_crew.third_crew import ThirdCrew
+from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew, FirstCrewOutput
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,17 +24,44 @@ load_dotenv()
 # Kodosumi will handle Ray initialization for us
 is_kodosumi = os.environ.get("KODOSUMI_ENVIRONMENT") == "true"
 
+# Sample datasets for demonstration
+SAMPLE_DATASETS = {
+    "sales_data": {
+        "name": "Quarterly Sales Data",
+        "description": "Sales data for the last 4 quarters across different regions and product categories.",
+        "sample": [
+            {"quarter": "Q1", "region": "North", "category": "Electronics", "sales": 125000},
+            {"quarter": "Q1", "region": "South", "category": "Electronics", "sales": 87000},
+            {"quarter": "Q1", "region": "East", "category": "Furniture", "sales": 118000},
+            {"quarter": "Q1", "region": "West", "category": "Clothing", "sales": 92000},
+            {"quarter": "Q2", "region": "North", "category": "Electronics", "sales": 132000},
+            {"quarter": "Q2", "region": "South", "category": "Furniture", "sales": 97000},
+            {"quarter": "Q3", "region": "East", "category": "Clothing", "sales": 105000},
+            {"quarter": "Q4", "region": "West", "category": "Electronics", "sales": 145000}
+        ]
+    },
+    "customer_feedback": {
+        "name": "Customer Feedback Survey",
+        "description": "Results from a recent customer satisfaction survey with ratings and comments.",
+        "sample": [
+            {"customer_id": 1001, "rating": 4.5, "comment": "Great product, fast delivery!"},
+            {"customer_id": 1002, "rating": 3.0, "comment": "Product was okay, but shipping took too long."},
+            {"customer_id": 1003, "rating": 5.0, "comment": "Excellent customer service and quality."},
+            {"customer_id": 1004, "rating": 2.5, "comment": "The product didn't meet my expectations."},
+            {"customer_id": 1005, "rating": 4.0, "comment": "Good value for money, would recommend."}
+        ]
+    }
+}
+
 class CrewAIFlowState(BaseModel):
     """
     Define your flow state here.
     This will hold all the data that is passed between steps in the flow.
     """
-    input_param1: str = "default_value"
-    input_param2: str = "default_value"
-    step1_output: dict = None
-    step2_output: list = []
-    step3_output: dict = None
+    dataset_name: str = "sales_data"  # Default dataset
+    analysis_results: Dict[str, Any] = None
     parallel_processing_results: List[Dict[str, Any]] = []
+    final_insights: Dict[str, Any] = None
 
 
 class CrewAIFlow(Flow[CrewAIFlowState]):
@@ -51,234 +76,171 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Validate the inputs to the flow.
         This is the first step in the flow.
         """
-        print("Validating your inputs ...")
-        # Add your validation logic here
+        print("Validating inputs...")
+        
+        # Check if the dataset exists
+        if self.state.dataset_name not in SAMPLE_DATASETS:
+            print(f"Dataset '{self.state.dataset_name}' not found. Using default dataset.")
+            self.state.dataset_name = "sales_data"
+        
+        print(f"Using dataset: {self.state.dataset_name}")
 
     @listen(validate_inputs)
-    def step1(self):
+    def analyze_data(self):
         """
         First step in the flow.
-        This step is executed after validate_inputs.
-        
-        This demonstrates how to use Ray to execute a CrewAI crew task remotely.
+        This step uses Ray to execute a CrewAI crew task remotely.
         """
-        print("Executing step 1 ...")
+        print("Analyzing data...")
+        
+        # Get the selected dataset
+        dataset = SAMPLE_DATASETS[self.state.dataset_name]
         
         # Use Ray to execute the first crew task
-        # Uncomment and modify this code when you have your crew ready
-        """
         # This will run the crew kickoff on a Ray worker
         result_ref = ray.remote(FirstCrew().crew().kickoff).remote(
-            inputs={"param1": self.state.input_param1, "param2": self.state.input_param2}
+            inputs={
+                "dataset_name": dataset["name"],
+                "dataset_description": dataset["description"],
+                "sample_data": json.dumps(dataset["sample"], indent=2)
+            }
         )
+        
+        # Wait for the result
         result = ray.get(result_ref)
         
         # Parse the result
         if isinstance(result.raw, str):
-            parsed_result = json.loads(result.raw)
+            try:
+                parsed_result = json.loads(result.raw)
+            except json.JSONDecodeError:
+                # If the result is not valid JSON, create a simple structure
+                parsed_result = {
+                    "summary": result.raw,
+                    "insights": ["Could not parse insights"],
+                    "recommendations": ["Could not parse recommendations"]
+                }
         else:
             parsed_result = result.raw
             
-        self.state.step1_output = parsed_result
-        """
-        
-        # For template purposes, just set a dummy output
-        self.state.step1_output = {"status": "completed", "data": "step1 output"}
-        print("Step 1 completed.")
+        self.state.analysis_results = parsed_result
+        print("Data analysis completed.")
 
-    @listen(step1)
-    def step2(self):
+    @listen(analyze_data)
+    def process_insights_in_parallel(self):
         """
         Second step in the flow.
-        This step is executed after step1.
-        
-        This demonstrates how to parallelize processing of multiple items using Ray.
+        This step demonstrates how to parallelize processing of multiple items using Ray.
         """
-        print("Executing step 2 ...")
+        print("Processing insights in parallel...")
         
-        # Example of a function that could be parallelized with Ray
+        # Extract insights from the analysis results
+        insights = self.state.analysis_results.get("insights", [])
+        
+        if not insights:
+            print("No insights to process.")
+            return
+        
+        # Define a remote function to process each insight
         @ray.remote
-        def process_item(item):
-            """
-            This function will be executed on a Ray worker.
-            
-            In a real-world scenario, this could be a computationally intensive task like:
-            - Processing a large document
-            - Running a machine learning model
-            - Performing a complex calculation
-            - Making an API call
-            """
+        def process_insight(insight, index):
+            """Process a single insight using Ray."""
             # Simulate some processing time
             time.sleep(random.uniform(0.5, 2.0))
             
-            # Process the item
+            # Generate a priority score based on the insight (just for demonstration)
+            priority = random.randint(1, 10)
+            
             return {
-                "processed_item": item,
-                "status": "processed",
-                "timestamp": time.time(),
-                "worker_id": ray.get_runtime_context().get_node_id()
+                "insight": insight,
+                "priority": priority,
+                "processed_by": f"Worker-{index}",
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
             }
         
-        # Example of parallel processing with Ray
-        items = ["item1", "item2", "item3", "item4", "item5"]
-        
-        # Create a list of remote tasks
-        # Each task will be scheduled on an available Ray worker
-        process_tasks = [process_item.remote(item) for item in items]
-        
-        # Wait for all tasks to complete and get the results
-        # This is non-blocking - we can do other work while these tasks run
+        # Process all insights in parallel
+        process_tasks = [process_insight.remote(insight, i) for i, insight in enumerate(insights)]
         processed_results = ray.get(process_tasks)
         
-        self.state.step2_output = processed_results
-        print(f"Step 2 completed with {len(processed_results)} processed items.")
+        # Sort results by priority (highest first)
+        self.state.parallel_processing_results = sorted(
+            processed_results, 
+            key=lambda x: x["priority"], 
+            reverse=True
+        )
+        
+        print(f"Processed {len(processed_results)} insights in parallel.")
 
-    @listen(step2)
-    def step3_parallel_processing(self):
-        """
-        Third step in the flow.
-        This step demonstrates more advanced parallel processing patterns with Ray.
-        """
-        print("Executing step 3 (advanced parallel processing) ...")
-        
-        # Define a more complex task that might require significant resources
-        @ray.remote(num_cpus=1)  # Request specific resources
-        def complex_processing_task(data, config):
-            """
-            A more complex processing task that might require specific resources.
-            
-            Args:
-                data: The data to process
-                config: Configuration parameters for the processing
-            
-            Returns:
-                The processed result
-            """
-            # Simulate complex processing
-            time.sleep(random.uniform(1.0, 3.0))
-            
-            # In a real scenario, this could be:
-            # - Training a machine learning model
-            # - Processing a large dataset
-            # - Running a complex simulation
-            
-            return {
-                "input_data": data,
-                "config": config,
-                "result": f"Processed {data} with {config}",
-                "worker_info": {
-                    "node_id": ray.get_runtime_context().get_node_id(),
-                    "job_id": ray.get_runtime_context().get_job_id()
-                }
-            }
-        
-        # Define a task that depends on the results of other tasks
-        @ray.remote
-        def aggregation_task(results):
-            """
-            A task that aggregates results from other tasks.
-            
-            Args:
-                results: A list of results from other tasks
-                
-            Returns:
-                The aggregated result
-            """
-            # Simulate aggregation processing
-            time.sleep(1.0)
-            
-            # In a real scenario, this could:
-            # - Combine results from multiple models
-            # - Perform statistical analysis on multiple outputs
-            # - Generate a summary report
-            
-            return {
-                "num_results": len(results),
-                "aggregated_data": [r["result"] for r in results],
-                "timestamp": time.time()
-            }
-        
-        # Create a set of data items to process
-        data_items = [f"data_{i}" for i in range(10)]
-        configs = [{"param": f"value_{i}"} for i in range(10)]
-        
-        # Launch the processing tasks
-        processing_refs = [
-            complex_processing_task.remote(data, config)
-            for data, config in zip(data_items, configs)
-        ]
-        
-        # Wait for all processing tasks to complete
-        # This demonstrates how to handle dependencies between tasks
-        processing_results = ray.get(processing_refs)
-        
-        # Launch the aggregation task with the results from the processing tasks
-        aggregation_ref = aggregation_task.remote(processing_results)
-        
-        # Wait for the aggregation task to complete
-        aggregation_result = ray.get(aggregation_ref)
-        
-        # Store the results
-        self.state.parallel_processing_results = {
-            "processing_results": processing_results,
-            "aggregation_result": aggregation_result
-        }
-        
-        print(f"Step 3 completed with {len(processing_results)} processed items and aggregation.")
-        
-    @listen(step3_parallel_processing)
-    def step4_final(self):
+    @listen(process_insights_in_parallel)
+    def finalize_results(self):
         """
         Final step in the flow.
-        This step is executed after step3_parallel_processing.
-        
-        This demonstrates how to use Ray to execute a final CrewAI crew task remotely.
+        This step aggregates the results from previous steps.
         """
-        print("Executing final step ...")
+        print("Finalizing results...")
         
-        # Use Ray to execute the third crew task
-        # Uncomment and modify this code when you have your crew ready
-        """
-        result_ref = ray.remote(ThirdCrew().crew().kickoff).remote(
-            inputs={
-                "step1_output": self.state.step1_output,
-                "step2_output": self.state.step2_output,
-                "parallel_processing_results": self.state.parallel_processing_results
-            }
-        )
-        result = ray.get(result_ref)
-        self.state.step3_output = result.raw
-        """
-        
-        # For template purposes, just set a dummy output
-        self.state.step3_output = {
-            "status": "completed", 
-            "summary": "All steps completed successfully",
-            "data": {
-                "step1": self.state.step1_output,
-                "step2": self.state.step2_output,
-                "parallel_processing": self.state.parallel_processing_results
-            }
+        # Combine the original analysis with the prioritized insights
+        self.state.final_insights = {
+            "summary": self.state.analysis_results.get("summary", "No summary available"),
+            "prioritized_insights": self.state.parallel_processing_results,
+            "recommendations": self.state.analysis_results.get("recommendations", []),
+            "dataset_analyzed": self.state.dataset_name,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        print("Final step completed.")
-        return self.state.step3_output
+        print("Flow completed successfully!")
+        
+        # Print a summary of the results
+        print("\n=== ANALYSIS RESULTS ===")
+        print(f"Dataset: {SAMPLE_DATASETS[self.state.dataset_name]['name']}")
+        print(f"Summary: {self.state.final_insights['summary'][:200]}...")
+        print("\nTop 3 Prioritized Insights:")
+        for i, insight in enumerate(self.state.final_insights['prioritized_insights'][:3], 1):
+            print(f"{i}. {insight['insight']} (Priority: {insight['priority']})")
+        print("\nRecommendations:")
+        for i, rec in enumerate(self.state.final_insights['recommendations'][:3], 1):
+            print(f"{i}. {rec}")
+        print("========================\n")
+        
+        return self.state.final_insights
 
 async def kickoff(inputs: dict):
     """
-    Kickoff the flow with the given inputs.
-    This function is called by the serve.py file.
+    Kickoff function for the flow.
+    This is the entry point for the flow when called from Kodosumi.
+    
+    Args:
+        inputs: A dictionary of inputs to the flow
+        
+    Returns:
+        The final state of the flow
     """
-    flow = CrewAIFlow()
+    # Initialize Ray if not already initialized and not in Kodosumi environment
+    if not ray.is_initialized() and not is_kodosumi:
+        ray_address = os.environ.get("RAY_ADDRESS")
+        if ray_address:
+            print(f"Connecting to Ray cluster at {ray_address}")
+            ray.init(address=ray_address)
+        else:
+            print("Initializing local Ray instance")
+            ray.init()
+        print(f"Ray initialized: {ray.cluster_resources()}")
     
-    # Set the inputs from the request
-    if inputs:
+    # Create the flow state with inputs
+    state = CrewAIFlowState()
+    
+    # Update state with inputs
+    if inputs and isinstance(inputs, dict):
         for key, value in inputs.items():
-            if hasattr(flow.state, key):
-                setattr(flow.state, key, value)
+            if hasattr(state, key):
+                setattr(state, key, value)
     
-    # Kickoff the flow
-    await flow.kickoff_async()
+    # Create and run the flow
+    flow = CrewAIFlow(state=state)
+    await flow.start()
+    
+    # Return the final state
+    return flow.state.dict()
 
 
 def plot():
@@ -309,28 +271,24 @@ def init_ray():
 
 
 if __name__ == "__main__":
-    try:
-        # Only initialize Ray if we're not running in Kodosumi
-        if not is_kodosumi:
-            init_ray()
-            
-        # For local testing
-        if len(sys.argv) > 1:
-            # Parse command line arguments
-            inputs = {}
-            for arg in sys.argv[1:]:
-                if '=' in arg:
-                    key, value = arg.split('=', 1)
-                    inputs[key] = value
-            
-            # Run the flow with the provided inputs
-            asyncio.run(kickoff(inputs))
-        else:
-            # Run with default inputs
-            asyncio.run(kickoff({}))
-            
-    finally:
-        # Only shut down Ray if we're not running in Kodosumi and Ray is initialized
-        if not is_kodosumi and ray.is_initialized():
-            print("Shutting down Ray")
-            ray.shutdown() 
+    """
+    Main entry point for the flow when run directly.
+    """
+    # Parse command line arguments
+    args = {}
+    for arg in sys.argv[1:]:
+        if "=" in arg:
+            key, value = arg.split("=", 1)
+            args[key] = value
+    
+    # Run the flow
+    result = asyncio.run(kickoff(args))
+    
+    # Print the result
+    print("\nFlow execution completed.")
+    
+    # Shutdown Ray if we initialized it
+    if ray.is_initialized() and not is_kodosumi:
+        print("Shutting down Ray...")
+        ray.shutdown()
+        print("Ray shutdown complete.") 

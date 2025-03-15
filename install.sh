@@ -5,6 +5,7 @@ set -e
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}Setting up kodosumi-vibe-template environment...${NC}"
@@ -39,6 +40,7 @@ echo -e "${YELLOW}Installing development dependencies...${NC}"
 pip install -e ".[dev]"
 
 # Install Kodosumi from GitHub
+echo -e "${BLUE}NOTE: Kodosumi is not available on PyPI and must be installed from GitHub${NC}"
 echo -e "${YELLOW}Installing Kodosumi from GitHub (dev branch)...${NC}"
 pip install git+https://github.com/masumi-network/kodosumi.git@dev
 

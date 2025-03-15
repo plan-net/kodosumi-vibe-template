@@ -1,3 +1,4 @@
+import os
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -6,20 +7,29 @@ from langchain_openai import ChatOpenAI
 
 # Define your output model
 class FirstCrewOutput(BaseModel):
-    """Output model for the FirstCrew"""
-    result: str = Field(..., description="The result of the crew's work")
-    details: Dict[str, Any] = Field(..., description="Additional details about the result")
+    """Output model for the DataAnalysisCrew"""
+    summary: str = Field(..., description="Summary of the data analysis")
+    insights: List[str] = Field(..., description="Key insights from the analysis")
+    recommendations: List[str] = Field(..., description="Recommendations based on the analysis")
 
 class FirstCrew:
     """
-    First crew in the flow.
-    This crew is responsible for the first step in the flow.
+    Data Analysis Crew.
+    This crew analyzes data and provides insights and recommendations.
     """
     
     def __init__(self):
         """Initialize the crew with any necessary configuration"""
         # Initialize your LLM
-        self.llm = ChatOpenAI()
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        
+        self.llm = ChatOpenAI(
+            model="gpt-3.5-turbo",
+            temperature=0.2,
+            api_key=api_key
+        )
     
     def crew(self) -> Crew:
         """
@@ -27,44 +37,61 @@ class FirstCrew:
         This method is called by the flow to get the crew.
         """
         # Create agents
-        agent1 = Agent(
-            name="Agent 1",
-            role="Role of Agent 1",
-            goal="Goal of Agent 1",
-            backstory="Backstory of Agent 1",
+        data_analyst = Agent(
+            name="Data Analyst",
+            role="Senior Data Analyst",
+            goal="Analyze data and extract meaningful patterns",
+            backstory="You are an experienced data analyst with expertise in finding patterns and insights in various types of data.",
             llm=self.llm,
             verbose=True
         )
         
-        agent2 = Agent(
-            name="Agent 2",
-            role="Role of Agent 2",
-            goal="Goal of Agent 2",
-            backstory="Backstory of Agent 2",
+        insights_specialist = Agent(
+            name="Insights Specialist",
+            role="Business Insights Specialist",
+            goal="Convert data analysis into actionable business insights",
+            backstory="You specialize in translating technical data findings into business insights and recommendations that can drive decision-making.",
             llm=self.llm,
             verbose=True
         )
         
         # Create tasks
-        task1 = Task(
-            name="Task 1",
-            agent=agent1,
-            description="Description of Task 1. Uses input parameters: {param1}, {param2}",
-            expected_output="Expected output of Task 1"
+        analysis_task = Task(
+            name="Analyze Data",
+            agent=data_analyst,
+            description="""
+            Analyze the following data and identify key patterns and trends:
+            
+            Dataset: {dataset_name}
+            Description: {dataset_description}
+            Sample data points: {sample_data}
+            
+            Provide a detailed analysis of the patterns and trends you observe.
+            """,
+            expected_output="A detailed analysis of the data with identified patterns and trends"
         )
         
-        task2 = Task(
-            name="Task 2",
-            agent=agent2,
-            description="Description of Task 2. Uses the output of Task 1.",
-            context=[task1],
-            expected_output="Expected output of Task 2"
+        insights_task = Task(
+            name="Generate Insights and Recommendations",
+            agent=insights_specialist,
+            description="""
+            Based on the data analysis provided, generate business insights and actionable recommendations.
+            
+            Analysis: {analysis_result}
+            
+            Provide:
+            1. A summary of the analysis
+            2. Key business insights
+            3. Actionable recommendations
+            """,
+            context=[analysis_task],
+            expected_output="Business insights and actionable recommendations based on the data analysis"
         )
         
         # Create and return the crew
         return Crew(
-            agents=[agent1, agent2],
-            tasks=[task1, task2],
+            agents=[data_analyst, insights_specialist],
+            tasks=[analysis_task, insights_task],
             process=Process.sequential,
             verbose=True
         ) 

@@ -11,6 +11,7 @@ template/
 ├── requirements.txt          # Legacy Python dependencies (for compatibility)
 ├── .env.example              # Example environment variables
 ├── .cursor.json              # Cursor editor configuration
+├── .cursorrules              # Cursor AI assistant configuration
 ├── .cursorignore             # Files to ignore in Cursor
 ├── install.sh                # Installation script for Linux/macOS
 ├── install.bat               # Installation script for Windows
@@ -45,6 +46,7 @@ template/
 - **tools/**: Directory for custom tools used by the crews.
 - **tests/**: Directory containing tests for the project.
 - **.cursor.json**: Configuration for the Cursor editor with custom snippets and settings.
+- **.cursorrules**: Configuration for the Cursor AI assistant with rules and guidelines.
 - **.cursorignore**: Specifies files and directories to be ignored by Cursor.
 - **install.sh**: Installation script for Linux/macOS.
 - **install.bat**: Installation script for Windows.
@@ -439,22 +441,28 @@ This template includes configuration for the [Cursor](https://cursor.sh/) editor
   - Code formatting with Black and isort
   - Linting with Ruff and mypy
   - Custom snippets for Ray and CrewAI
-  - AI assistant settings optimized for this project
-  - **AI preferences** that guide the assistant to always use Ray and Kodosumi
+
+- `.cursorrules`: Configuration file for Cursor's AI assistant with:
+  - Rules for handling output formats
+  - Deployment workflow guidance
+  - Framework preferences and patterns
+  - Context files for better AI understanding
 
 - `.cursorignore`: Specifies files and directories to be ignored by Cursor
 
-#### AI Assistant Preferences
+#### Cursor Configuration Files
 
-The Cursor AI assistant is configured with preferences that guide it to:
+The template uses two separate configuration files for Cursor:
 
-- Always use Ray for distributed processing instead of threading or multiprocessing
-- Always use CrewAI for agent-based workflows
-- Always use Kodosumi for serving and deployment
-- Always use exa.ai for web search in CrewAI applications
-- Follow best practices for Ray's remote functions and actor model
-- Implement CrewAI crews for complex AI agent tasks
-- Use Kodosumi's deployment patterns for serving
+1. **`.cursor.json`**: Controls editor behavior like formatting, linting, and snippets.
+   - This file is used by the Cursor editor itself
+   - Contains settings for code formatters, linters, and snippets
+   - Does not contain AI guidance
+
+2. **`.cursorrules`**: Guides the AI assistant's behavior.
+   - This file is used by the Cursor AI assistant
+   - Contains rules, patterns, and guidelines for AI recommendations
+   - Includes our output format rules and deployment workflow
 
 #### Custom Snippets
 
@@ -463,10 +471,15 @@ The following custom snippets are available in Python files:
 - `rayremote`: Create a Ray remote function
 - `rayremoteclass`: Create a Ray remote class
 - `rayinit`: Initialize Ray or connect to an existing cluster
+- `crewaiflow`: Create a CrewAI Flow with output format support
 - `crewaiagent`: Create a CrewAI Agent
 - `crewaitask`: Create a CrewAI Task
-- `kodosumiapp`: Create a Kodosumi service with FastAPI
+- `kodosumiapp`: Create a Kodosumi service with ServeAPI
+- `outputformat`: Handle output format in a Kodosumi service
+- `kodomsumitest`: Commands for deploying and testing with Kodosumi
+- `localtestmain`: Create a main block for local testing with Ray
 - `exasearch`: Create an Exa.ai web search tool for CrewAI
+- `rayserveconfig`: Create a Ray Serve config.yaml file
 
 ### Code Quality Tools
 

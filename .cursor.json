@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "formatOnSave": true,
+  "formatOnPaste": true,
+  "formatOnType": false,
+  "defaultFormatter": "black",
+  "formatters": {
+    "black": {
+      "command": "black",
+      "args": ["--line-length", "88", "${file}"]
+    },
+    "isort": {
+      "command": "isort",
+      "args": ["--profile", "black", "${file}"]
+    }
+  },
+  "linters": {
+    "ruff": {
+      "command": "ruff",
+      "args": ["check", "${file}"],
+      "rootPatterns": ["pyproject.toml"]
+    },
+    "mypy": {
+      "command": "mypy",
+      "args": ["${file}"],
+      "rootPatterns": ["pyproject.toml"]
+    }
+  },
+  "runOnSave": {
+    "**/*.py": ["black", "isort", "ruff"]
+  },
+  "aiAssistant": {
+    "enableInlineCompletion": true,
+    "enableAutoCompletion": true,
+    "contextStrategy": "comprehensive",
+    "codeUnderstanding": {
+      "includePatterns": [
+        "workflows/**/*.py",
+        "tests/**/*.py",
+        "*.py",
+        "*.yaml",
+        "*.toml"
+      ],
+      "excludePatterns": [
+        "**/__pycache__/**",
+        "**/.venv/**",
+        "**/venv/**",
+        "**/.git/**"
+      ]
+    },
+    "preferences": {
+      "frameworks": ["ray", "crewai", "kodosumi", "exa.ai"],
+      "preferredPatterns": [
+        "Always use Ray for distributed processing",
+        "Always use CrewAI for agent-based workflows",
+        "Always use Kodosumi for serving and deployment",
+        "Always use exa.ai for web search in CrewAI applications",
+        "Prefer Ray's remote functions for parallelization",
+        "Use Ray's actor model for stateful computations",
+        "Implement CrewAI crews for complex AI agent tasks",
+        "Use Kodosumi's deployment patterns for serving",
+        "Use exa.ai for retrieving real-time information from the web"
+      ],
+      "avoidPatterns": [
+        "Avoid using threading or multiprocessing directly, prefer Ray",
+        "Avoid implementing custom serving solutions, use Kodosumi",
+        "Avoid implementing agent frameworks from scratch, use CrewAI",
+        "Avoid using other web search tools when exa.ai can be used",
+        "Avoid implementing custom web search solutions"
+      ]
+    },
+    "contextFiles": [
+      "workflows/crewai_flow/main.py",
+      "workflows/crewai_flow/serve.py",
+      "config.yaml"
+    ]
+  },
+  "fileWatcher": {
+    "patterns": ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.html"],
+    "ignore": ["**/__pycache__/**", "**/.venv/**", "**/venv/**", "**/.git/**"]
+  },
+  "snippets": {
+    "python": {
+      "ray-remote": {
+        "prefix": "rayremote",
+        "body": [
+          "@ray.remote",
+          "def ${1:function_name}(${2:parameters}):",
+          "    \"\"\"${3:Function description}\"\"\"",
+          "    ${0:pass}"
+        ],
+        "description": "Create a Ray remote function"
+      },
+      "ray-remote-class": {
+        "prefix": "rayremoteclass",
+        "body": [
+          "@ray.remote",
+          "class ${1:ClassName}:",
+          "    \"\"\"${2:Class description}\"\"\"",
+          "    ",
+          "    def __init__(self, ${3:parameters}):",
+          "        ${4:pass}",
+          "    ",
+          "    def ${5:method_name}(self, ${6:parameters}):",
+          "        ${0:pass}"
+        ],
+        "description": "Create a Ray remote class"
+      },
+      "crewai-agent": {
+        "prefix": "crewaiagent",
+        "body": [
+          "agent = Agent(",
+          "    name=\"${1:Agent Name}\",",
+          "    role=\"${2:Agent Role}\",",
+          "    goal=\"${3:Agent Goal}\",",
+          "    backstory=\"${4:Agent Backstory}\",",
+          "    llm=self.llm,",
+          "    verbose=${5:True}",
+          ")"
+        ],
+        "description": "Create a CrewAI Agent"
+      },
+      "crewai-task": {
+        "prefix": "crewaitask",
+        "body": [
+          "task = Task(",
+          "    name=\"${1:Task Name}\",",
+          "    agent=${2:agent},",
+          "    description=\"${3:Task Description}\",",
+          "    expected_output=\"${4:Expected Output}\"",
+          ")"
+        ],
+        "description": "Create a CrewAI Task"
+      },
+      "kodosumi-deploy": {
+        "prefix": "kodosumiapp",
+        "body": [
+          "from kodosumi.serve import Launch, ServeAPI",
+          "",
+          "app = ServeAPI()",
+          "",
+          "@deployment",
+          "@ingress(app)",
+          "class ${1:ServiceName}:",
+          "    \"\"\"${2:Service description}\"\"\"",
+          "    ",
+          "    @app.get(\"/\")",
+          "    async def get(self, request: Request):",
+          "        \"\"\"Handle GET requests.\"\"\"",
+          "        ${0:pass}",
+          "    ",
+          "    @app.post(\"/\")",
+          "    async def post(self, request: Request):",
+          "        \"\"\"Handle POST requests.\"\"\"",
+          "        form_data = await request.form()",
+          "        return Launch(request, \"${3:module.path:function}\", {",
+          "            \"${4:param_name}\": form_data.get(\"${4:param_name}\", \"\")",
+          "        })"
+        ],
+        "description": "Create a Kodosumi service with FastAPI"
+      },
+      "ray-cluster-init": {
+        "prefix": "rayinit",
+        "body": [
+          "import ray",
+          "",
+          "# Initialize Ray or connect to existing cluster",
+          "if not ray.is_initialized():",
+          "    ray_address = os.environ.get(\"RAY_ADDRESS\")",
+          "    if ray_address:",
+          "        ray.init(address=ray_address)",
+          "    else:",
+          "        ray.init()",
+          "    print(f\"Ray initialized: {ray.cluster_resources()}\")"
+        ],
+        "description": "Initialize Ray or connect to existing cluster"
+      },
+      "exa-web-search": {
+        "prefix": "exasearch",
+        "body": [
+          "from langchain_community.tools.exa.exa_search import ExaSearchTool",
+          "",
+          "# Create an Exa search tool",
+          "exa_search = ExaSearchTool(",
+          "    api_key=os.environ.get(\"EXA_API_KEY\"),",
+          "    max_results=${1:5}",
+          ")",
+          "",
+          "# Add the tool to your agent",
+          "agent = Agent(",
+          "    name=\"${2:Research Agent}\",",
+          "    role=\"${3:Web Researcher}\",",
+          "    goal=\"${4:Find accurate information from the web}\",",
+          "    backstory=\"${5:I am a web research specialist}\",",
+          "    tools=[exa_search],",
+          "    llm=self.llm,",
+          "    verbose=True",
+          ")"
+        ],
+        "description": "Create an Exa.ai web search tool for CrewAI"
+      }
+    }
+  },
+  "pathMappings": {
+    "workflows": "${workspaceFolder}/workflows"
+  }
+} 

@@ -1,0 +1,29 @@
+# ./config.yaml
+
+proxy_location: EveryNode
+http_options:
+  host: 127.0.0.1
+  port: 8001
+grpc_options:
+  port: 9001
+  grpc_servicer_functions: []
+logging_config:
+  encoding: TEXT
+  log_level: DEBUG
+  logs_dir: null
+  enable_access_log: true
+applications:
+- name: crewai_flow
+  route_prefix: /crewai_flow
+  import_path: crewai_flow.serve:fast_app
+  runtime_env:
+    env_vars:
+      PYTHONPATH: ./workflows
+      OPENAI_API_KEY: your_openai_api_key_here
+      OTEL_SDK_DISABLED: "true"
+    pip:
+    - crewai==0.100.*
+    - ray>=2.6.0
+    - langchain>=0.0.267
+    - langchain-openai>=0.0.2
+    - git+https://github.com/masumi-network/kodosumi.git@dev 

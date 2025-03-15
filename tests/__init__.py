@@ -1,0 +1,1 @@
+"""Tests for the kodosumi-vibe-template package.""" 

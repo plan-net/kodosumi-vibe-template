@@ -70,6 +70,51 @@
         "Validate output_format to ensure it's either 'markdown' or 'json'"
       ]
     },
+    "deploymentWorkflow": {
+      "stages": [
+        {
+          "name": "local-development",
+          "description": "Develop and test the flow locally with Ray",
+          "steps": [
+            "Implement the flow with proper output format support",
+            "Add a __main__ block for local execution",
+            "Start a local Ray cluster using 'ray start --head'",
+            "Test the flow directly with 'python -m workflows.crewai_flow.main'"
+          ]
+        },
+        {
+          "name": "kodosumi-deployment",
+          "description": "Deploy and test with Kodosumi",
+          "steps": [
+            "Ensure Ray is running ('ray start --head')",
+            "Start Kodosumi spooler ('python -m kodosumi.cli spool')",
+            "Update config.yaml with your workflow configuration",
+            "Deploy with Ray Serve ('serve deploy ./config.yaml')",
+            "Start Kodosumi services ('python -m kodosumi.cli serve')",
+            "Access the service at http://localhost:3370"
+          ]
+        },
+        {
+          "name": "production-deployment",
+          "description": "Deploy to production Kodosumi environment",
+          "steps": [
+            "Package the workflow for deployment",
+            "Update production config.yaml with appropriate settings",
+            "Deploy using production Ray Serve instance",
+            "Monitor for any issues with Ray cluster integration"
+          ]
+        }
+      ],
+      "rules": [
+        "Always complete local-development stage before proceeding to kodosumi-deployment",
+        "Test both output formats (markdown and json) at each stage",
+        "Ensure Ray is properly started before any deployment steps",
+        "Always use the Kodosumi spooler for handling background tasks",
+        "Configure the Ray Serve config.yaml with appropriate environment variables",
+        "Include proper error handling for Ray cluster connection failures",
+        "Document any environment-specific configurations needed"
+      ]
+    },
     "preferences": {
       "frameworks": ["ray", "crewai", "kodosumi", "exa.ai"],
       "preferredPatterns": [
@@ -80,11 +125,16 @@
         "Prefer Ray's remote functions for parallelization",
         "Use Ray's actor model for stateful computations",
         "Implement CrewAI crews for complex AI agent tasks",
-        "Use Kodosumi's deployment patterns for serving",
+        "Use Kodosumi's ServeAPI instead of FastAPI for deployments",
         "Use exa.ai for retrieving real-time information from the web",
         "When implementing AI agent-to-agent interactions, always use JSON output format",
         "For human-readable outputs in Kodosumi UI, use markdown format",
-        "Always include output_format parameter in CrewAI flows with markdown as default"
+        "Always include output_format parameter in CrewAI flows with markdown as default",
+        "Always test CrewAI flows locally with a Ray cluster before deploying to Kodosumi",
+        "Use the __main__ block in flow modules to enable local testing",
+        "Always use the Launch function from kodosumi.serve for launching flows",
+        "Configure Ray Serve with a proper config.yaml file",
+        "Ensure Kodosumi spooler is running for background task processing"
       ],
       "avoidPatterns": [
         "Avoid using threading or multiprocessing directly, prefer Ray",
@@ -93,7 +143,12 @@
         "Avoid using other web search tools when exa.ai can be used",
         "Avoid implementing custom web search solutions",
         "Avoid hardcoding output formats without providing options for both human and agent consumption",
-        "Avoid returning raw JSON to human users without proper formatting"
+        "Avoid returning raw JSON to human users without proper formatting",
+        "Avoid deploying to Kodosumi without first testing locally with Ray",
+        "Avoid assuming Ray is always initialized in the environment",
+        "Avoid using FastAPI directly, use kodosumi.serve.ServeAPI instead",
+        "Avoid skipping the Kodosumi spooler when deploying services",
+        "Avoid manual deployment without using Ray Serve's config.yaml"
       ]
     },
     "contextFiles": [
@@ -203,29 +258,55 @@
       "kodosumi-deploy": {
         "prefix": "kodosumiapp",
         "body": [
+          "from pathlib import Path",
+          "",
+          "from fastapi import Request",
+          "from fastapi.responses import HTMLResponse",
+          "from fastapi.templating import Jinja2Templates",
+          "from ray.serve import deployment, ingress",
+          "",
           "from kodosumi.serve import Launch, ServeAPI",
           "",
-          "app = ServeAPI()",
+          "",
+          "app = ServeAPI()  # Use ServeAPI instead of FastAPI",
+          "",
+          "templates = Jinja2Templates(",
+          "    directory=Path(__file__).parent.joinpath(\"templates\"))",
           "",
           "@deployment",
           "@ingress(app)",
           "class ${1:ServiceName}:",
           "    \"\"\"${2:Service description}\"\"\"",
           "    ",
-          "    @app.get(\"/\")",
-          "    async def get(self, request: Request):",
+          "    @app.get(\"/\", ",
+          "             name=\"${3:Display Name}\", ",
+          "             description=\"${4:Service description for UI}\")",
+          "    async def get(self, request: Request) -> HTMLResponse:",
           "        \"\"\"Handle GET requests.\"\"\"",
-          "        ${0:pass}",
+          "        return templates.TemplateResponse(",
+          "            request=request, ",
+          "            name=\"${5:template.html}\", ",
+          "            context={})",
           "    ",
-          "    @app.post(\"/\")",
+          "    @app.post(\"/\", response_model=None)",
           "    async def post(self, request: Request):",
           "        \"\"\"Handle POST requests.\"\"\"",
           "        form_data = await request.form()",
-          "        return Launch(request, \"${3:module.path:function}\", {",
-          "            \"${4:param_name}\": form_data.get(\"${4:param_name}\", \"\")",
-          "        })"
+          "        ${6:param_name} = str(form_data.get(\"${6:param_name}\", \"\"))",
+          "        ",
+          "        # Extract output format if needed",
+          "        output_format = str(form_data.get(\"output_format\", \"markdown\"))",
+          "        ",
+          "        # Launch the flow using the Kodosumi Launch function",
+          "        return Launch(request, \"${7:module.path:function}\", {",
+          "            \"${6:param_name}\": ${6:param_name},",
+          "            \"output_format\": output_format",
+          "        })",
+          "",
+          "# Bind the service to Ray Serve",
+          "fast_app = ${1:ServiceName}.bind()"
         ],
-        "description": "Create a Kodosumi service with FastAPI"
+        "description": "Create a Kodosumi service with ServeAPI"
       },
       "output-format-handler": {
         "prefix": "outputformat",
@@ -245,6 +326,48 @@
         ],
         "description": "Handle output format in a Kodosumi service"
       },
+      "kodosumi-local-test": {
+        "prefix": "kodomsumitest",
+        "body": [
+          "# Kodosumi Deployment Commands",
+          "",
+          "# 1. Start a local Ray cluster (if not already running)",
+          "# ray start --head",
+          "# ray status  # Check if Ray is running properly",
+          "",
+          "# 2. Start Kodosumi spooler",
+          "# python -m kodosumi.cli spool",
+          "",
+          "# 3. Create/update Ray Serve configuration in config.yaml",
+          "# - name: ${1:app_name}",
+          "# - route_prefix: /${2:route_prefix}",
+          "# - import_path: workflows.${3:module_path}.serve:fast_app",
+          "# - runtime_env:",
+          "#     env_vars:",
+          "#       OPENAI_API_KEY: your_api_key_here",
+          "#       EXA_API_KEY: your_api_key_here",
+          "#       OTEL_SDK_DISABLED: \"true\"",
+          "#     pip:",
+          "#     - crewai==0.86.*",
+          "#     - crewai_tools==0.17.*",
+          "",
+          "# 4. Deploy with Ray Serve",
+          "# serve deploy ./config.yaml",
+          "",
+          "# 5. Start Kodosumi services",
+          "# python -m kodosumi.cli serve",
+          "",
+          "# 6. Access the service at http://localhost:3370",
+          "",
+          "# 7. Test with curl commands (if needed)",
+          "# Test markdown output (default):",
+          "# curl -X POST \"http://localhost:8001/${2:route_prefix}/\" -d \"dataset_name=${4:dataset_name}\"",
+          "",
+          "# Test JSON output (for agent-to-agent):",
+          "# curl -X POST \"http://localhost:8001/${2:route_prefix}/\" -d \"dataset_name=${4:dataset_name}&output_format=json\""
+        ],
+        "description": "Commands for deploying and testing with Kodosumi"
+      },
       "ray-cluster-init": {
         "prefix": "rayinit",
         "body": [
@@ -260,6 +383,59 @@
           "    print(f\"Ray initialized: {ray.cluster_resources()}\")"
         ],
         "description": "Initialize Ray or connect to existing cluster"
+      },
+      "local-testing-main": {
+        "prefix": "localtestmain",
+        "body": [
+          "if __name__ == \"__main__\":",
+          "    \"\"\"",
+          "    Main entry point for local testing.",
+          "    Run this script directly to test the flow with a local Ray cluster.",
+          "    ",
+          "    First start a local Ray cluster with: ray start --head",
+          "    Then run this script: python -m workflows.${1:module_path}.main",
+          "    \"\"\"",
+          "    import asyncio",
+          "    import sys",
+          "    import time",
+          "    import json",
+          "",
+          "    # Parse command line arguments",
+          "    args = {}",
+          "    for arg in sys.argv[1:]:",
+          "        if \"=\" in arg:",
+          "            key, value = arg.split(\"=\", 1)",
+          "            args[key] = value",
+          "",
+          "    # Set default arguments if not provided",
+          "    if \"dataset_name\" not in args:",
+          "        args[\"dataset_name\"] = \"${2:default_dataset}\"",
+          "    if \"output_format\" not in args:",
+          "        args[\"output_format\"] = \"markdown\"  # Default for human readability",
+          "",
+          "    print(f\"Running local test with arguments: {args}\")",
+          "    start_time = time.time()",
+          "",
+          "    # Run the flow",
+          "    result = asyncio.run(kickoff(args))",
+          "",
+          "    # Print the result",
+          "    print(f\"\\nFlow execution completed in {time.time() - start_time:.2f} seconds.\")",
+          "    ",
+          "    if args.get(\"output_format\") == \"json\":",
+          "        # For JSON output, pretty print it",
+          "        print(json.dumps(result, indent=2))",
+          "    else:",
+          "        # For markdown output, print as is",
+          "        print(result)",
+          "    ",
+          "    # Shutdown Ray if we initialized it",
+          "    if ray.is_initialized():",
+          "        print(\"Shutting down Ray...\")",
+          "        ray.shutdown()",
+          "        print(\"Ray shutdown complete.\")"
+        ],
+        "description": "Create a main block for local testing with Ray"
       },
       "exa-web-search": {
         "prefix": "exasearch",
@@ -284,6 +460,39 @@
           ")"
         ],
         "description": "Create an Exa.ai web search tool for CrewAI"
+      },
+      "ray-serve-config": {
+        "prefix": "rayserveconfig",
+        "body": [
+          "# config.yaml for Ray Serve deployment",
+          "",
+          "proxy_location: EveryNode",
+          "http_options:",
+          "  host: 127.0.0.1",
+          "  port: 8001",
+          "grpc_options:",
+          "  port: 9001",
+          "  grpc_servicer_functions: []",
+          "logging_config:",
+          "  encoding: TEXT",
+          "  log_level: DEBUG",
+          "  logs_dir: null",
+          "  enable_access_log: true",
+          "applications:",
+          "- name: ${1:app_name}",
+          "  route_prefix: /${2:route_prefix}",
+          "  import_path: workflows.${3:module_path}.serve:fast_app",
+          "  runtime_env:",
+          "    env_vars:",
+          "      PYTHONPATH: .",
+          "      OPENAI_API_KEY: ${4:your_openai_api_key}",
+          "      EXA_API_KEY: ${5:your_exa_api_key}",
+          "      OTEL_SDK_DISABLED: \"true\"",
+          "    pip:",
+          "    - crewai==0.86.*",
+          "    - crewai_tools==0.17.*"
+        ],
+        "description": "Create a Ray Serve config.yaml file for Kodosumi deployment"
       }
     }
   },

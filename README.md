@@ -148,34 +148,122 @@ To run the flow locally:
 cp .env.example .env
 # Edit .env with your API keys
 
+# Start a local Ray cluster (if not already running)
+ray start --head
+
 # Run with default parameters
 python -m workflows.crewai_flow.main
 
 # Run with custom parameters
-python -m workflows.crewai_flow.main input_param1=value1 input_param2=value2
+python -m workflows.crewai_flow.main dataset_name=customer_feedback output_format=json
 ```
 
 When running locally, the flow will:
-1. Initialize a local Ray instance or connect to an existing Ray cluster (if RAY_ADDRESS is set)
+1. Connect to the local Ray cluster or initialize a new one if needed
 2. Execute the flow with the provided parameters
-3. Shut down Ray when finished
+3. Shut down Ray when finished (if it was initialized by the flow)
 
 ### Kodosumi Deployment
 
-To deploy the flow with Kodosumi:
+To deploy the flow with Kodosumi, follow these steps:
 
 ```bash
-# Ensure Kodosumi is installed from GitHub
+# 1. Ensure Kodosumi is installed from GitHub
 pip install git+https://github.com/masumi-network/kodosumi.git@dev
 
-# Deploy the flow
-kodosumi deploy
+# 2. Start a local Ray cluster (if not already running)
+ray start --head
+
+# 3. Start Kodosumi spooler
+python -m kodosumi.cli spool
+
+# 4. Update config.yaml with your workflow configuration
+# See the example config.yaml in this repository
+
+# 5. Deploy with Ray Serve
+serve deploy ./config.yaml
+
+# 6. Start Kodosumi services
+python -m kodosumi.cli serve
+
+# 7. Access the service at http://localhost:3370
 ```
 
 When deployed with Kodosumi:
-1. Kodosumi handles Ray initialization and management
-2. The flow is accessible via the configured route prefix (e.g., `/crewai_flow`)
-3. The web interface allows users to input parameters and execute the flow
+1. Ray is used for distributed processing
+2. The Kodosumi spooler handles background tasks
+3. The flow is accessible via the configured route prefix (e.g., `/crewai_flow`)
+4. The web interface allows users to input parameters and execute the flow
+
+## Output Format Options
+
+This template supports two output formats for all flows:
+
+### Markdown Format (Default)
+
+The Markdown format is designed for human readability and includes:
+- Formatted headers for sections
+- Bulleted lists for insights and recommendations
+- Emphasis on important information
+- Timestamp and metadata
+
+This format is ideal for:
+- Displaying results in the Kodosumi UI
+- Generating reports for human consumption
+- Documentation and sharing results
+
+### JSON Format
+
+The JSON format is designed for machine readability and agent-to-agent interactions:
+- Structured data in a standard format
+- Easy to parse and process programmatically
+- Contains all the same information as the Markdown format
+
+This format is ideal for:
+- AI agent-to-agent interactions
+- Programmatic processing of results
+- Integration with other systems and APIs
+
+### Specifying the Output Format
+
+You can specify the output format in several ways:
+
+#### In the Web Interface
+
+Select the output format from the dropdown menu in the web interface.
+
+#### In Local Execution
+
+```bash
+# Run with JSON output format
+python -m workflows.crewai_flow.main output_format=json
+
+# Run with Markdown output format (default)
+python -m workflows.crewai_flow.main output_format=markdown
+```
+
+#### In Programmatic Usage
+
+```python
+from workflows.crewai_flow.main import kickoff
+import asyncio
+
+# Request JSON format
+result = asyncio.run(kickoff({"output_format": "json"}))
+
+# Request Markdown format
+result = asyncio.run(kickoff({"output_format": "markdown"}))
+```
+
+#### In API Requests
+
+```bash
+# Request JSON format
+curl -X POST "http://localhost:8001/crewai_flow/" -d "output_format=json"
+
+# Request Markdown format
+curl -X POST "http://localhost:8001/crewai_flow/" -d "output_format=markdown"
+```
 
 ## Ray Integration and Scaling
 
@@ -242,17 +330,80 @@ aggregation_result = ray.get(aggregation_ref)
 
 The `config.yaml` file contains the configuration for Kodosumi:
 
-- **proxy_location**: Specifies where the proxy should run.
+```yaml
+# Example config.yaml for Kodosumi deployment
+
+proxy_location: EveryNode
+http_options:
+  host: 127.0.0.1
+  port: 8001
+grpc_options:
+  port: 9001
+  grpc_servicer_functions: []
+logging_config:
+  encoding: TEXT
+  log_level: DEBUG
+  logs_dir: null
+  enable_access_log: true
+applications:
+- name: crewai_flow
+  route_prefix: /crewai_flow
+  import_path: workflows.crewai_flow.serve:fast_app
+  runtime_env:
+    env_vars:
+      PYTHONPATH: .
+      OPENAI_API_KEY: your_openai_api_key_here
+      EXA_API_KEY: your_exa_api_key_here
+      OTEL_SDK_DISABLED: "true"
+    pip:
+    - crewai==0.86.*
+    - crewai_tools==0.17.*
+```
+
+### Configuration Options
+
+- **proxy_location**: Specifies where the proxy should run (usually `EveryNode`).
 - **http_options**: HTTP server configuration.
+  - **host**: The host to bind to (usually `127.0.0.1` for local development).
+  - **port**: The port to bind to (default is `8001`).
 - **grpc_options**: gRPC server configuration.
+  - **port**: The port for gRPC (default is `9001`).
 - **logging_config**: Logging configuration.
+  - **encoding**: Log encoding format (usually `TEXT`).
+  - **log_level**: Log level (e.g., `DEBUG`, `INFO`).
+  - **enable_access_log**: Whether to enable access logs.
 - **applications**: List of applications to deploy.
-  - **name**: Application name.
-  - **route_prefix**: URL prefix for the application.
-  - **import_path**: Path to the application's entry point.
+  - **name**: Application name (used for identification).
+  - **route_prefix**: URL prefix for the application (e.g., `/crewai_flow`).
+  - **import_path**: Python import path to the application (must end with `:fast_app`).
   - **runtime_env**: Environment configuration for the application.
-    - **env_vars**: Environment variables.
-    - **pip**: Python dependencies.
+    - **env_vars**: Environment variables to set.
+      - **PYTHONPATH**: Path to add to Python's module search path.
+      - **OPENAI_API_KEY**: Your OpenAI API key.
+      - **EXA_API_KEY**: Your Exa.ai API key (if using web search).
+      - **OTEL_SDK_DISABLED**: Disable OpenTelemetry SDK (usually set to `"true"`).
+    - **pip**: Additional pip packages to install in the runtime environment.
+
+### Multiple Applications
+
+You can deploy multiple applications in the same config.yaml file:
+
+```yaml
+applications:
+- name: crewai_flow
+  route_prefix: /crewai_flow
+  import_path: workflows.crewai_flow.serve:fast_app
+  runtime_env:
+    # ... configuration for crewai_flow ...
+
+- name: another_flow
+  route_prefix: /another_flow
+  import_path: workflows.another_flow.serve:fast_app
+  runtime_env:
+    # ... configuration for another_flow ...
+```
+
+Each application will be accessible at its own route prefix.
 
 ## Example
 
@@ -326,4 +477,77 @@ The template is configured with several code quality tools:
 - **Ruff**: Fast Python linter
 - **mypy**: Static type checker
 
-These tools are configured in `pyproject.toml` and can be run manually or automatically through Cursor. 
+These tools are configured in `pyproject.toml` and can be run manually or automatically through Cursor.
+
+## Development and Testing Workflow
+
+This template follows a specific development and testing workflow to ensure that flows work correctly in both local and Kodosumi environments:
+
+### 1. Local Development with Ray
+
+Start by developing and testing your flow locally with Ray:
+
+```bash
+# Start a local Ray cluster
+ray start --head
+
+# Run the flow directly
+python -m workflows.crewai_flow.main
+```
+
+This allows you to quickly iterate on your flow without deploying to Kodosumi.
+
+### 2. Local Kodosumi Testing
+
+Once your flow works locally, test it with a local Kodosumi deployment:
+
+```bash
+# Ensure Ray is running
+ray status
+
+# Start Kodosumi spooler
+python -m kodosumi.cli spool
+
+# Deploy with Ray Serve
+serve deploy ./config.yaml
+
+# Start Kodosumi services
+python -m kodosumi.cli serve
+```
+
+Access your flow at http://localhost:3370 and test it through the Kodosumi UI.
+
+### 3. Production Deployment
+
+After testing locally, you can deploy to a production Kodosumi environment:
+
+```bash
+# Update production config.yaml with appropriate settings
+# Deploy to production Ray Serve instance
+serve deploy ./production_config.yaml
+```
+
+### Testing Both Output Formats
+
+At each stage, test both output formats to ensure they work correctly:
+
+```bash
+# Test markdown output (default)
+python -m workflows.crewai_flow.main output_format=markdown
+
+# Test JSON output
+python -m workflows.crewai_flow.main output_format=json
+```
+
+In the Kodosumi UI, use the output format dropdown to test both formats.
+
+### Error Handling
+
+Ensure your flow includes proper error handling for:
+
+- Ray cluster connection failures
+- Invalid input parameters
+- API key issues
+- Output format validation
+
+This will make your flow more robust in both local and Kodosumi environments. 

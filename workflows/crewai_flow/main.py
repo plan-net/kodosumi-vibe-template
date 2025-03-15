@@ -1,4 +1,34 @@
 #!/usr/bin/env python
+
+"""
+CrewAI Data Analysis Flow
+
+This module defines a flow for data analysis using CrewAI and Ray.
+
+Cursor Rules for AI Agents:
+---------------------------
+1. Output Format: This flow supports two output formats:
+   - 'markdown': Human-readable format with headers and formatting (default)
+   - 'json': Machine-readable format for agent-to-agent interactions
+   
+   When making API calls to this flow, AI agents should specify the 'output_format' 
+   parameter as 'json' for easier parsing and processing of results.
+   
+   Example:
+   ```python
+   result = await kickoff({"dataset_name": "sales_data", "output_format": "json"})
+   # Process the JSON result
+   summary = result["summary"]
+   insights = result["prioritized_insights"]
+   ```
+
+2. Dataset Selection: Valid dataset names are defined in the SAMPLE_DATASETS dictionary.
+   Current options: 'sales_data', 'customer_feedback'
+
+3. Error Handling: Invalid parameters will default to 'sales_data' for dataset_name
+   and 'markdown' for output_format.
+"""
+
 import json
 import os
 import requests
@@ -59,10 +89,15 @@ class CrewAIFlowState(BaseModel):
     This will hold all the data that is passed between steps in the flow.
     """
     dataset_name: str = "sales_data"  # Default dataset
+    output_format: str = "markdown"   # Default output format (markdown or json)
     analysis_results: Dict[str, Any] = None
     parallel_processing_results: List[Dict[str, Any]] = []
     final_insights: Dict[str, Any] = None
 
+    @property
+    def is_valid_output_format(self) -> bool:
+        """Check if the output format is valid."""
+        return self.output_format.lower() in ["markdown", "json"]
 
 class CrewAIFlow(Flow[CrewAIFlowState]):
     """
@@ -202,7 +237,58 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             print(f"{i}. {rec}")
         print("========================\n")
         
-        return self.state.final_insights
+        # Format the output based on the requested format
+        if not self.state.is_valid_output_format:
+            print(f"Invalid output format: {self.state.output_format}. Using default (markdown).")
+            self.state.output_format = "markdown"
+            
+        if self.state.output_format.lower() == "json":
+            # For JSON format, return the raw data structure
+            return self.state.final_insights
+        else:
+            # For markdown format, convert the data to a formatted markdown string
+            return self._format_as_markdown(self.state.final_insights)
+    
+    def _format_as_markdown(self, insights: Dict[str, Any]) -> str:
+        """
+        Format the insights as a markdown string.
+        
+        Args:
+            insights: The insights to format
+            
+        Returns:
+            A markdown formatted string
+        """
+        dataset_name = SAMPLE_DATASETS[insights["dataset_analyzed"]]["name"]
+        
+        # Build the markdown output
+        md = [
+            f"# Analysis Results for {dataset_name}",
+            "",
+            f"*Analysis completed at: {insights['timestamp']}*",
+            "",
+            "## Summary",
+            "",
+            insights["summary"],
+            "",
+            "## Key Insights (Prioritized)",
+            ""
+        ]
+        
+        # Add prioritized insights
+        for i, insight in enumerate(insights["prioritized_insights"], 1):
+            md.append(f"{i}. **{insight['insight']}** *(Priority: {insight['priority']})*")
+        
+        md.append("")
+        md.append("## Recommendations")
+        md.append("")
+        
+        # Add recommendations
+        for i, rec in enumerate(insights["recommendations"], 1):
+            md.append(f"{i}. {rec}")
+        
+        # Join all lines with newlines
+        return "\n".join(md)
 
 async def kickoff(inputs: dict):
     """
@@ -211,9 +297,11 @@ async def kickoff(inputs: dict):
     
     Args:
         inputs: A dictionary of inputs to the flow
+            - dataset_name: The name of the dataset to analyze
+            - output_format: The format of the output (markdown or json)
         
     Returns:
-        The final state of the flow
+        The final state of the flow, formatted according to output_format
     """
     # Initialize Ray if not already initialized and not in Kodosumi environment
     if not ray.is_initialized() and not is_kodosumi:
@@ -235,12 +323,21 @@ async def kickoff(inputs: dict):
             if hasattr(state, key):
                 setattr(state, key, value)
     
+    # Validate output format
+    if not state.is_valid_output_format:
+        print(f"Invalid output format: {state.output_format}. Using default (markdown).")
+        state.output_format = "markdown"
+    
     # Create and run the flow
     flow = CrewAIFlow(state=state)
-    await flow.start()
+    result = await flow.start()
     
-    # Return the final state
-    return flow.state.dict()
+    # Return the result in the requested format
+    if state.output_format.lower() == "json":
+        return flow.state.dict()
+    else:
+        # For markdown, we return the formatted result from finalize_results
+        return result
 
 
 def plot():

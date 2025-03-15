@@ -48,6 +48,28 @@
         "**/.git/**"
       ]
     },
+    "outputFormats": {
+      "default": "markdown",
+      "formats": {
+        "markdown": {
+          "description": "Human-readable format with headers and formatting",
+          "useCases": ["UI display", "Kodosumi interface", "Documentation"],
+          "example": "# Analysis Results\n\n## Key Insights\n\n1. **First insight**\n2. **Second insight**"
+        },
+        "json": {
+          "description": "Machine-readable format for agent-to-agent interactions",
+          "useCases": ["API responses", "Agent-to-agent communication", "Data processing"],
+          "example": "{ \"summary\": \"Analysis summary\", \"insights\": [\"First insight\", \"Second insight\"] }"
+        }
+      },
+      "rules": [
+        "Always use JSON format for agent-to-agent interactions",
+        "Always use markdown format for human-readable outputs",
+        "Always include output_format parameter in flow interfaces",
+        "Default to markdown when output_format is not specified",
+        "Validate output_format to ensure it's either 'markdown' or 'json'"
+      ]
+    },
     "preferences": {
       "frameworks": ["ray", "crewai", "kodosumi", "exa.ai"],
       "preferredPatterns": [
@@ -59,19 +81,27 @@
         "Use Ray's actor model for stateful computations",
         "Implement CrewAI crews for complex AI agent tasks",
         "Use Kodosumi's deployment patterns for serving",
-        "Use exa.ai for retrieving real-time information from the web"
+        "Use exa.ai for retrieving real-time information from the web",
+        "When implementing AI agent-to-agent interactions, always use JSON output format",
+        "For human-readable outputs in Kodosumi UI, use markdown format",
+        "Always include output_format parameter in CrewAI flows with markdown as default"
       ],
       "avoidPatterns": [
         "Avoid using threading or multiprocessing directly, prefer Ray",
         "Avoid implementing custom serving solutions, use Kodosumi",
         "Avoid implementing agent frameworks from scratch, use CrewAI",
         "Avoid using other web search tools when exa.ai can be used",
-        "Avoid implementing custom web search solutions"
+        "Avoid implementing custom web search solutions",
+        "Avoid hardcoding output formats without providing options for both human and agent consumption",
+        "Avoid returning raw JSON to human users without proper formatting"
       ]
     },
     "contextFiles": [
       "workflows/crewai_flow/main.py",
       "workflows/crewai_flow/serve.py",
+      "workflows/crewai_flow/templates/form.html",
+      "workflows/crewai_flow/crews/first_crew/first_crew.py",
+      "workflows/crewai_flow/README.md",
       "config.yaml"
     ]
   },
@@ -90,6 +120,44 @@
           "    ${0:pass}"
         ],
         "description": "Create a Ray remote function"
+      },
+      "crewai-flow-with-output-format": {
+        "prefix": "crewaiflow",
+        "body": [
+          "class ${1:FlowName}State(BaseModel):",
+          "    \"\"\"Define your flow state here.\"\"\"",
+          "    output_format: str = \"markdown\"  # Default output format (markdown or json)",
+          "    ${2:other_parameters}: ${3:type} = ${4:default_value}",
+          "",
+          "    @property",
+          "    def is_valid_output_format(self) -> bool:",
+          "        \"\"\"Check if the output format is valid.\"\"\"",
+          "        return self.output_format.lower() in [\"markdown\", \"json\"]",
+          "",
+          "class ${1:FlowName}(Flow[${1:FlowName}State]):",
+          "    \"\"\"Define your flow steps here.\"\"\"",
+          "",
+          "    @start()",
+          "    def validate_inputs(self):",
+          "        \"\"\"Validate the inputs to the flow.\"\"\"",
+          "        # Validate output format",
+          "        if not self.state.is_valid_output_format:",
+          "            print(f\"Invalid output format: {self.state.output_format}. Using default (markdown).\")",
+          "            self.state.output_format = \"markdown\"",
+          "        ${0:pass}",
+          "",
+          "    def _format_as_markdown(self, data: Dict[str, Any]) -> str:",
+          "        \"\"\"Format the data as a markdown string.\"\"\"",
+          "        # Build the markdown output",
+          "        md = [",
+          "            f\"# ${5:Title}\",",
+          "            \"\",",
+          "            \"## ${6:Section}\",",
+          "            \"\"",
+          "        ]",
+          "        return \"\\n\".join(md)"
+        ],
+        "description": "Create a CrewAI Flow with output format support"
       },
       "ray-remote-class": {
         "prefix": "rayremoteclass",
@@ -158,6 +226,24 @@
           "        })"
         ],
         "description": "Create a Kodosumi service with FastAPI"
+      },
+      "output-format-handler": {
+        "prefix": "outputformat",
+        "body": [
+          "# Extract output format from the form",
+          "output_format = str(form_data.get(\"output_format\", \"markdown\"))",
+          "",
+          "# Validate output format",
+          "if output_format not in [\"markdown\", \"json\"]:",
+          "    output_format = \"markdown\"  # Default to markdown if invalid",
+          "",
+          "# Include output_format in the parameters",
+          "return Launch(request, \"${1:module.path:function}\", {",
+          "    \"${2:other_param}\": form_data.get(\"${2:other_param}\", \"\"),",
+          "    \"output_format\": output_format",
+          "})"
+        ],
+        "description": "Handle output format in a Kodosumi service"
       },
       "ray-cluster-init": {
         "prefix": "rayinit",

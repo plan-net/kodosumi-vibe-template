@@ -17,12 +17,22 @@
         </div>
         <div class="space"></div>
         
+        <div class="field border">
+            <label>Output Format</label>
+            <select name="output_format">
+                <option value="markdown" selected>Markdown (Human-readable)</option>
+                <option value="json">JSON (Agent-to-agent)</option>
+            </select>
+        </div>
+        <div class="space"></div>
+        
         <div class="info">
             <p>This will run a CrewAI flow that:</p>
             <ol>
                 <li>Analyzes the selected dataset using AI agents</li>
                 <li>Processes insights in parallel using Ray</li>
                 <li>Prioritizes and aggregates the results</li>
+                <li>Returns results in the selected format (Markdown for human reading, JSON for agent consumption)</li>
             </ol>
         </div>
         <div class="space"></div>

@@ -2,12 +2,38 @@ import os
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
+"""
+Data Analysis Crew for CrewAI Flow
+
+Cursor Rules for AI Agents:
+---------------------------
+1. Output Format: The output from this crew can be formatted in two ways:
+   - 'markdown': Human-readable format with headers and formatting (default in Kodosumi UI)
+   - 'json': Machine-readable format for agent-to-agent interactions
+   
+   AI agents should request 'json' format when programmatically processing the results.
+
+2. Output Structure: The output follows the FirstCrewOutput model structure with:
+   - summary: A text summary of the analysis
+   - insights: A list of key insights discovered
+   - recommendations: A list of actionable recommendations
+
+3. Integration: When calling this crew directly, the raw output will be in the format
+   specified by the flow's output_format parameter.
+"""
+
 from crewai import Agent, Crew, Process, Task
 from langchain_openai import ChatOpenAI
 
 # Define your output model
 class FirstCrewOutput(BaseModel):
-    """Output model for the DataAnalysisCrew"""
+    """
+    Output model for the DataAnalysisCrew
+    
+    This model defines the structure of the output from the crew.
+    The output can be formatted as either markdown (human-readable) or
+    JSON (for agent-to-agent interactions) based on the flow's output_format parameter.
+    """
     summary: str = Field(..., description="Summary of the data analysis")
     insights: List[str] = Field(..., description="Key insights from the analysis")
     recommendations: List[str] = Field(..., description="Recommendations based on the analysis")

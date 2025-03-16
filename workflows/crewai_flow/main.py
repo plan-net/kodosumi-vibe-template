@@ -1,34 +1,5 @@
 #!/usr/bin/env python
 
-"""
-CrewAI Data Analysis Flow
-
-This module defines a flow for data analysis using CrewAI and Ray.
-
-Cursor Rules for AI Agents:
----------------------------
-1. Output Format: This flow supports two output formats:
-   - 'markdown': Human-readable format with headers and formatting (default)
-   - 'json': Machine-readable format for agent-to-agent interactions
-   
-   When making API calls to this flow, AI agents should specify the 'output_format' 
-   parameter as 'json' for easier parsing and processing of results.
-   
-   Example:
-   ```python
-   result = await kickoff({"dataset_name": "sales_data", "output_format": "json"})
-   # Process the JSON result
-   summary = result["summary"]
-   insights = result["prioritized_insights"]
-   ```
-
-2. Dataset Selection: Valid dataset names are defined in the SAMPLE_DATASETS dictionary.
-   Current options: 'sales_data', 'customer_feedback'
-
-3. Error Handling: Invalid parameters will default to 'sales_data' for dataset_name
-   and 'markdown' for output_format.
-"""
-
 import json
 import os
 import requests
@@ -131,14 +102,23 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         # Get the selected dataset
         dataset = SAMPLE_DATASETS[self.state.dataset_name]
         
-        # Use Ray to execute the first crew task
-        # This will run the crew kickoff on a Ray worker
-        result_ref = ray.remote(FirstCrew().crew().kickoff).remote(
-            inputs={
-                "dataset_name": dataset["name"],
-                "dataset_description": dataset["description"],
-                "sample_data": json.dumps(dataset["sample"], indent=2)
-            }
+        # Define a remote function to execute the crew task
+        @ray.remote
+        def execute_crew_task(dataset_name, dataset_description, sample_data):
+            crew = FirstCrew().crew()
+            return crew.kickoff(
+                inputs={
+                    "dataset_name": dataset_name,
+                    "dataset_description": dataset_description,
+                    "sample_data": sample_data
+                }
+            )
+        
+        # Use Ray to execute the remote function
+        result_ref = execute_crew_task.remote(
+            dataset["name"],
+            dataset["description"],
+            json.dumps(dataset["sample"], indent=2)
         )
         
         # Wait for the result
@@ -306,12 +286,18 @@ async def kickoff(inputs: dict):
     # Initialize Ray if not already initialized and not in Kodosumi environment
     if not ray.is_initialized() and not is_kodosumi:
         ray_address = os.environ.get("RAY_ADDRESS")
+        # Create a runtime environment that includes the current Python packages
+        runtime_env = {
+            "pip": ["crewai==0.105.0", "langchain>=0.0.267", "langchain-openai>=0.0.2", "langchain-community>=0.0.10"],
+            "env_vars": {"PYTHONPATH": os.getcwd()}
+        }
+        
         if ray_address:
             print(f"Connecting to Ray cluster at {ray_address}")
-            ray.init(address=ray_address)
+            ray.init(address=ray_address, runtime_env=runtime_env)
         else:
             print("Initializing local Ray instance")
-            ray.init()
+            ray.init(runtime_env=runtime_env)
         print(f"Ray initialized: {ray.cluster_resources()}")
     
     # Create the flow state with inputs
@@ -330,7 +316,8 @@ async def kickoff(inputs: dict):
     
     # Create and run the flow
     flow = CrewAIFlow(state=state)
-    result = await flow.start()
+    # Use kickoff_async which is designed for async contexts
+    result = await flow.kickoff_async()
     
     # Return the result in the requested format
     if state.output_format.lower() == "json":
@@ -354,17 +341,23 @@ def init_ray():
     Initialize Ray with appropriate configuration.
     This is used when running locally.
     """
+    # Create a runtime environment that includes the current Python packages
+    runtime_env = {
+        "pip": ["crewai==0.105.0", "langchain>=0.0.267", "langchain-openai>=0.0.2", "langchain-community>=0.0.10"],
+        "env_vars": {"PYTHONPATH": os.getcwd()}
+    }
+    
     # Check if we should connect to an existing Ray cluster
     ray_address = os.environ.get("RAY_ADDRESS")
     
     if ray_address:
         # Connect to an existing Ray cluster
         print(f"Connecting to Ray cluster at {ray_address}")
-        ray.init(address=ray_address)
+        ray.init(address=ray_address, runtime_env=runtime_env)
     else:
         # Start a new local Ray instance
         print("Starting a new local Ray instance")
-        ray.init()
+        ray.init(runtime_env=runtime_env)
 
 
 if __name__ == "__main__":

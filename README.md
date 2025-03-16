@@ -43,36 +43,39 @@ A template for building AI workflows with CrewAI and Kodosumi.
 
 ## Development with Cursor
 
-This template includes specialized Cursor rules that provide AI-assisted development:
+This template includes specialized Cursor rules that provide AI-assisted development following test-driven development best practices.
+
+### Key Principles
+
+- Test-driven development with pytest
+- Step-by-step feature development
+- Comprehensive testing at multiple levels:
+  - Single crew tests
+  - Main flow tests
+  - Service application tests
+- Bug fixes include test adjustments
 
 ### Available Rules
 
+- **General**: Test-driven development practices and overall guidelines
+- **Installation**: Environment setup and dependency management
 - **Crews**: Guidelines for developing individual CrewAI crews
 - **Flow**: Best practices for implementing CrewAI flows
-- **Frameworks**: Preferred frameworks and their usage
 - **HTML**: Standards for creating web interfaces
-- **Installation**: Environment setup and dependency management
+- **Testing**: Test execution and validation
 - **Kodosumi**: Integration with Kodosumi services
-- **Testing**: Test-driven development practices
+- **Frameworks**: Preferred frameworks and their usage
+- **Workflows**: Guidelines for creating new workflow packages
 
 ### Using Cursor Rules
 
 1. Open the project in Cursor
 2. Access context-aware assistance based on file type
-3. Get AI suggestions for:
-   - Creating agents and tasks
-   - Implementing flows
-   - Writing tests
-   - Debugging issues
-   - Deploying services
-
-### Key Benefits
-
-- Test-driven development guidance
-- Framework-specific best practices
-- Error handling patterns
-- Resource management tips
-- Integration examples
+3. Follow test-driven development workflow:
+   - Write tests first
+   - Implement features against tests
+   - Validate with test suite
+   - Update documentation
 
 ## Documentation
 
@@ -107,11 +110,56 @@ workflows/
 ## Creating a Workflow
 
 1. Create a new directory in `workflows/`
-2. Define your flow state and steps in `main.py`
-3. Create a Kodosumi service in `serve.py`
-4. Add your workflow to `config.yaml`
+   ```bash
+   mkdir -p workflows/my_workflow/{agents,crews,tasks,tools,templates}
+   touch workflows/my_workflow/{__init__.py,main.py,serve.py}
+   ```
 
-See the [Development Guide](docs/development/guide.md) for detailed instructions.
+2. Create corresponding test directory
+   ```bash
+   mkdir -p tests/workflows/my_workflow
+   touch tests/workflows/my_workflow/{__init__.py,test_basic.py}
+   ```
+
+3. Define your flow state and steps in `main.py`
+   ```python
+   from crewai.flow import Flow, listen, start
+   
+   class MyWorkflowState(BaseModel):
+       # Your flow state here
+       pass
+   
+   class MyWorkflow(Flow[MyWorkflowState]):
+       # Your flow implementation here
+       pass
+   ```
+
+4. Create a Kodosumi service in `serve.py`
+   ```python
+   from kodosumi.serve import Launch, ServeAPI
+   
+   app = ServeAPI()
+   
+   @deployment
+   @ingress(app)
+   class MyWorkflowService:
+       # Your service implementation here
+       pass
+   ```
+
+5. Add your workflow to `config.yaml`
+   ```yaml
+   applications:
+   - name: my_workflow
+     route_prefix: /my_workflow
+     import_path: workflows.my_workflow.serve:fast_app
+     runtime_env:
+       env_vars:
+         PYTHONPATH: .
+         OPENAI_API_KEY: ${OPENAI_API_KEY}
+   ```
+
+Follow the structure of the example workflow in `workflows/example/` for best practices. See the [Development Guide](docs/development/guide.md) for detailed instructions.
 
 ## Deployment
 
@@ -131,4 +179,4 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

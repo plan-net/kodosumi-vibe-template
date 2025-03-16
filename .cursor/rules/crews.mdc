@@ -1,10 +1,26 @@
 ---
 description: Setting up Crews with CrewAI as part of the flow
-globs: 
+globs: workflows/crews/*
 alwaysApply: false
 ---
+# Setting up Crew with CrewAI
 
-# Your rule content
+## Recommended Patters for Crews
+- keep it simple if possible and don't create to complex Crews
+- make use of sequential processes by default
+- make sure to load the agents.yaml file as config
+- make sure to load the tasks.yaml file as config
 
-- You can @ files here
-- You can use markdown but dont have to
+## Recommended Patterns for Agents
+- always pick the best possible model from ChatGPT for each agent
+- only allow delegation for agents if truly necessary within the workflow
+- use the agents.yaml for role, goal and backstory in a separate config folder for config
+
+## Recommended Patterns for Tasks
+- always work with "output_pydantic" to generate well structured output
+- always define highly descriptive pydantic data structures for the expected output
+- use the tasks.yaml for role, goal and backstory in a separate config folder for config
+
+## Avoid Patterns
+- Avoid using other web search tools when exa.ai can be used
+- Avoid implementing custom web search solutions

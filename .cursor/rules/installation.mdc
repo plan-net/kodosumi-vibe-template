@@ -1,0 +1,20 @@
+---
+description: When you install and setup the environment
+globs: 
+alwaysApply: false
+---
+# Installation and Setup
+
+## Installation Guidelines
+- never forget to work with a python virtual environment
+- make sure to install all dependencies as per the [pyproject.toml](mdc:pyproject.toml) and [requirements.txt](mdc:requirements.txt)
+- be aware that you will clone kodosumi from Github and checkout the dev branch
+- make sure to exclude the kodosumi folder as part of the .gitignore setup
+- after a full installation run first all tests first with pytest to see if everything works
+
+## Setup of the Environment
+- make sure that the user setups the API Keys in the .ENV file before running the code
+- make sure to run the Ray Head in the background as described in the [README.md](mdc:README.md)
+- make sure to run the Kodosumi Spooler in the background as desribed in the [README.md](mdc:README.md)
+- make sure to deploy the [config.yaml](mdc:config.yaml) to with serve as described in the [README.md](mdc:README.md)
+- make sure to run the Kodosumi servie as described in the [README.md](mdc:README.md)

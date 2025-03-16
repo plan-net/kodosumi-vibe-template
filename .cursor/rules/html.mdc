@@ -1,9 +1,8 @@
 ---
 description: When you are creating forms for data entry as part of kodosumi
-globs: "**/*.html,**/templates/**/*.html"
+globs: *.html
 alwaysApply: false
 ---
-
 # HTML Guidelines for Kodosumi Forms
 
 ## General Principles

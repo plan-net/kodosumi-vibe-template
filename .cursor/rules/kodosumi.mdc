@@ -1,40 +1,13 @@
 ---
 description: When setting up and testing with Kodosumi
-globs: "**/serve*.py,**/config*.yaml,**/kodosumi/**/*.py"
+globs: **/config*.yaml,**/serve.py
 alwaysApply: false
 ---
 
 # Kodosumi Integration for CrewAI Flows
 
-## Local Development Setup
-1. Create a virtual environment: `python -m venv venv`
-2. Activate the environment: 
-   - Windows: `venv\Scripts\activate`
-   - Unix/MacOS: `source venv/bin/activate`
-3. Install dependencies: `pip install -e .`
-4. Start Ray: `ray start --head`
-5. Verify Ray is running: `ray status`
-
-## Deployment Process
-1. Start the Kodosumi spooler:
-   ```bash
-   python -m kodosumi.cli spool
-   ```
-
-2. Deploy with Ray Serve:
-   ```bash
-   serve deploy ./config.yaml
-   ```
-
-3. Start the Kodosumi web interface:
-   ```bash
-   python -m kodosumi.cli serve
-   ```
-
-4. Access the web interface at http://localhost:3370
-
 ## Configuration
-- Update `config.yaml` with your workflow configuration:
+- Update `config.yaml` with your workflow configuration. Like for example:
   ```yaml
   applications:
     - name: crewai_flow

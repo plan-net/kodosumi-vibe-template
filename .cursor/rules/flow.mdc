@@ -1,6 +1,6 @@
 ---
 description: When developing the CrewAI flow
-globs: "**/flow*.py,**/main.py,**/workflows/**/*.py"
+globs: **/main.py
 alwaysApply: false
 ---
 

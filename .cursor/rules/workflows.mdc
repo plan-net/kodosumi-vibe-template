@@ -7,3 +7,6 @@ alwaysApply: false
 - make sure to also create a new folder for the unit-tests for this workflow in tests/workflows
 - make sure to setup the basic structure according to our example workflow
 - make sure to edit the config.yaml file and append the new workflow as application in the list of applications
+- make sure to create a serve.py file the correct setup for this project
+- make sure to create a new html template capturing the inputs required for the workflow
+- make sure to create in the main.py flow a way to submit these inputs as an inputs dictionary with the kickoff

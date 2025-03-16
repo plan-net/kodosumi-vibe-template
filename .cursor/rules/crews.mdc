@@ -1,6 +1,6 @@
 ---
 description: Developing Single Crews as part of a CrewAI flow
-globs: "**/crews/**/*.py,**/crew*.py,**/*crew*.py,**/agent*.py"
+globs: **/crew*.py,**/*crew*.py
 alwaysApply: false
 ---
 

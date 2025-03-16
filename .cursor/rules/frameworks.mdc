@@ -1,6 +1,6 @@
 ---
-description: Preferred Frameworks to work with within this project
-globs: "**/*.py,**/*.yaml,**/pyproject.toml,**/requirements.txt"
+description: 
+globs: *.py
 alwaysApply: false
 ---
 

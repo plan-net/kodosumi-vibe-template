@@ -20,13 +20,19 @@ A template for building AI workflows with CrewAI and Kodosumi.
 3. **Configure Environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your settings
+   # Edit .env with your OpenAI API key and other settings
    ```
 
-4. **Run Locally**
+4. **Run Example Flow**
    ```bash
-   python -m kodosumi.cli serve
+   # Run the example flow directly
+   python -m workflows.crewai_flow.main
+
+   # Or run with test data
+   python -m workflows.crewai_flow.main --dataset example_data
    ```
+
+   For Kodosumi deployment, see the [Deployment Guide](docs/deployment.md).
 
 ## Features
 

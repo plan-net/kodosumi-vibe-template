@@ -10,12 +10,21 @@ A template for building AI workflows with CrewAI and Kodosumi.
    cd kodosumi-vibe-template
    ```
 
-2. **Install Dependencies**
+2. **Run Installation Script**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -e .
+   # On Unix/macOS
+   chmod +x install.sh
+   ./install.sh
+
+   # On Windows
+   install.bat
    ```
+
+   This will:
+   - Create and activate a virtual environment
+   - Install all dependencies
+   - Set up the initial configuration
+   - Create a .env file for your environment variables
 
 3. **Configure Environment**
    ```bash

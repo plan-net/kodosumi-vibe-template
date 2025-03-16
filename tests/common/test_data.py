@@ -3,7 +3,8 @@ Unit tests for the data module.
 """
 
 import unittest
-from workflows.crewai_flow.data import SAMPLE_DATASETS
+import pytest
+from workflows.common.data import SAMPLE_DATASETS
 
 
 class TestData(unittest.TestCase):

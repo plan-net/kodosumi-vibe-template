@@ -3,9 +3,15 @@ Unit tests for the formatters module.
 """
 
 import unittest
-import json
 from unittest.mock import MagicMock, patch, PropertyMock
-from workflows.crewai_flow.formatters import format_output, format_as_markdown, extract_structured_data
+import json
+import pytest
+
+from workflows.common.formatters import (
+    format_output,
+    format_as_markdown,
+    extract_structured_data
+)
 
 
 class TestFormatters(unittest.TestCase):
@@ -14,14 +20,17 @@ class TestFormatters(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.sample_insights = {
+            "dataset_analyzed": "test_dataset",
+            "timestamp": "2023-01-01 12:00:00",
             "summary": "This is a test summary",
             "prioritized_insights": [
                 {"insight": "Insight 1", "priority": 9},
                 {"insight": "Insight 2", "priority": 7}
             ],
-            "recommendations": ["Recommendation 1", "Recommendation 2"],
-            "dataset_analyzed": "test_dataset",
-            "timestamp": "2023-01-01 12:00:00"
+            "recommendations": [
+                "Recommendation 1",
+                "Recommendation 2"
+            ]
         }
 
     def test_format_output_json(self):
@@ -30,12 +39,21 @@ class TestFormatters(unittest.TestCase):
         self.assertEqual(result, self.sample_insights)
 
     def test_format_output_markdown(self):
-        """Test that format_output calls format_as_markdown when format is markdown."""
+        """Test that format_output correctly formats output in markdown."""
         result = format_output(self.sample_insights, "markdown")
-        self.assertIsInstance(result, str)
-        self.assertIn("# Data Analysis Report: test_dataset", result)
+        
+        # Verify that the result contains markdown formatting
+        self.assertIn("# Data Analysis Report", result)
+        self.assertIn("## Summary", result)
+        self.assertIn("## Key Insights", result)
+        self.assertIn("## Recommendations", result)
+        self.assertIn("*Generated on", result)
+        
+        # Verify content
+        self.assertIn("test_dataset", result)
         self.assertIn("This is a test summary", result)
         self.assertIn("Insight 1", result)
+        self.assertIn("Priority: 9", result)
         self.assertIn("Recommendation 1", result)
 
     def test_format_output_default(self):
@@ -158,6 +176,19 @@ class TestFormatters(unittest.TestCase):
         result = extract_structured_data(mock_crew_result)
         
         self.assertIsNone(result)
+
+    def test_format_output_json(self):
+        """Test that format_output correctly formats output in JSON."""
+        result = format_output(self.sample_insights, "json")
+        
+        # Verify that we get back the same dictionary
+        self.assertEqual(result, self.sample_insights)
+    
+    def test_format_output_invalid_format(self):
+        """Test that format_output handles invalid output formats gracefully."""
+        # Invalid formats should default to markdown
+        result = format_output(self.sample_insights, "invalid_format")
+        self.assertIn("# Data Analysis Report", result)
 
 
 if __name__ == "__main__":

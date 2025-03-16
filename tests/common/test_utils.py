@@ -3,11 +3,12 @@ Unit tests for the utils module.
 """
 
 import unittest
-from unittest.mock import MagicMock, patch, call, ANY
+from unittest.mock import MagicMock, patch, call, ANY, PropertyMock
 import os
 import sys
 import ray
-from workflows.crewai_flow.utils import (
+import pytest
+from workflows.common.utils import (
     RAY_TASK_NUM_CPUS, RAY_TASK_MAX_RETRIES, RAY_TASK_TIMEOUT, RAY_BATCH_SIZE,
     RAY_INIT_NUM_CPUS, RAY_DASHBOARD_PORT,
     apply_ray_patch, initialize_ray, test_ray_connectivity, shutdown_ray
@@ -64,7 +65,7 @@ class TestUtils(unittest.TestCase):
 
     @patch('ray.init')
     @patch('ray.is_initialized')
-    @patch('workflows.crewai_flow.utils.apply_ray_patch')
+    @patch('workflows.common.utils.apply_ray_patch')
     def test_initialize_ray_already_initialized(self, mock_apply_ray_patch, mock_is_initialized, mock_init):
         """Test that initialize_ray returns True when Ray is already initialized."""
         # Configure the mock to indicate that Ray is already initialized
@@ -84,7 +85,7 @@ class TestUtils(unittest.TestCase):
 
     @patch('ray.init')
     @patch('ray.is_initialized')
-    @patch('workflows.crewai_flow.utils.apply_ray_patch')
+    @patch('workflows.common.utils.apply_ray_patch')
     def test_initialize_ray_kodosumi(self, mock_apply_ray_patch, mock_is_initialized, mock_init):
         """Test that initialize_ray returns True when in Kodosumi environment."""
         # Configure the mock to indicate that Ray is not initialized
@@ -104,7 +105,7 @@ class TestUtils(unittest.TestCase):
 
     @patch('ray.init')
     @patch('ray.is_initialized')
-    @patch('workflows.crewai_flow.utils.apply_ray_patch')
+    @patch('workflows.common.utils.apply_ray_patch')
     def test_initialize_ray_connect_success(self, mock_apply_ray_patch, mock_is_initialized, mock_init):
         """Test that initialize_ray connects to an existing Ray cluster when possible."""
         # Configure the mocks
@@ -129,7 +130,7 @@ class TestUtils(unittest.TestCase):
 
     @patch('ray.init')
     @patch('ray.is_initialized')
-    @patch('workflows.crewai_flow.utils.apply_ray_patch')
+    @patch('workflows.common.utils.apply_ray_patch')
     def test_initialize_ray_connect_failure(self, mock_apply_ray_patch, mock_is_initialized, mock_init):
         """Test that initialize_ray starts a new Ray instance when connecting fails."""
         # Configure the mocks
@@ -157,31 +158,25 @@ class TestUtils(unittest.TestCase):
         mock_print.assert_any_call(f"Started new Ray instance with {RAY_INIT_NUM_CPUS} CPUs")
 
     @patch('ray.init')
-    @patch('ray.is_initialized')
-    @patch('workflows.crewai_flow.utils.apply_ray_patch')
-    def test_initialize_ray_exception(self, mock_apply_ray_patch, mock_is_initialized, mock_init):
-        """Test that initialize_ray handles exceptions gracefully."""
-        # Configure the mocks
-        mock_is_initialized.return_value = False
-        mock_apply_ray_patch.return_value = True
-        mock_init.side_effect = Exception("Test exception")
-        
+    def test_initialize_ray_exception(self, mock_ray_init):
+        """Test that initialize_ray handles unexpected exceptions gracefully."""
+        # Configure the mock to raise a different type of exception for both attempts
+        mock_ray_init.side_effect = [
+            ValueError("Unexpected error"),  # First attempt with address="auto"
+            ValueError("Unexpected error")   # Second attempt with num_cpus
+        ]
+
         # Call the function
-        with patch('builtins.print') as mock_print:
-            result = initialize_ray(is_kodosumi=False)
-        
+        result = initialize_ray()
+
         # Verify the result
         self.assertFalse(result)
-        
-        # Verify that apply_ray_patch was called
-        mock_apply_ray_patch.assert_called_once()
-        
-        # Verify that ray.init was called
-        mock_init.assert_called_once()
-        
-        # Verify that the error message was printed
-        mock_print.assert_any_call("Error initializing Ray: Test exception")
-        mock_print.assert_any_call("Continuing without Ray parallelization")
+
+        # Verify that ray.init was called with both sets of arguments
+        mock_ray_init.assert_has_calls([
+            unittest.mock.call(address="auto", ignore_reinit_error=True),
+            unittest.mock.call(num_cpus=RAY_INIT_NUM_CPUS, dashboard_port=None, ignore_reinit_error=True)
+        ])
 
     @patch('ray.is_initialized')
     def test_test_ray_connectivity_not_initialized(self, mock_is_initialized):
@@ -326,6 +321,78 @@ class TestUtils(unittest.TestCase):
         
         # Verify that ray.shutdown was not called
         mock_shutdown.assert_not_called()
+
+    @patch('ray.init')
+    def test_initialize_ray_connect_success(self, mock_ray_init):
+        """Test that initialize_ray successfully connects to Ray."""
+        # Configure the mock
+        mock_ray_init.return_value = MagicMock()
+
+        # Call the function
+        result = initialize_ray()
+
+        # Verify the result
+        self.assertTrue(result)
+
+        # Verify that ray.init was called with the correct arguments
+        mock_ray_init.assert_called_once_with(
+            address="auto",
+            ignore_reinit_error=True
+        )
+
+    @patch('ray.init')
+    def test_initialize_ray_connect_failure(self, mock_ray_init):
+        """Test that initialize_ray handles connection failures gracefully."""
+        # Configure the mock to raise an exception for the first call and succeed for the second
+        mock_ray_init.side_effect = [
+            ConnectionError("Failed to connect to Ray"),
+            MagicMock()
+        ]
+
+        # Call the function
+        result = initialize_ray()
+
+        # Verify the result
+        self.assertTrue(result)
+
+        # Verify that ray.init was called twice with the correct arguments
+        mock_ray_init.assert_has_calls([
+            unittest.mock.call(address="auto", ignore_reinit_error=True),
+            unittest.mock.call(num_cpus=RAY_INIT_NUM_CPUS, dashboard_port=None, ignore_reinit_error=True)
+        ])
+
+    def test_test_ray_connectivity_success(self):
+        """Test that test_ray_connectivity returns True when Ray is working."""
+        with patch('ray.is_initialized', return_value=True):
+            # Create a mock remote function that has a remote attribute
+            mock_remote_fn = MagicMock()
+            mock_remote_fn.remote = MagicMock(return_value="remote_result")
+            
+            # Create a mock decorator that returns our mock function
+            mock_remote = MagicMock(return_value=mock_remote_fn)
+            
+            with patch('ray.remote', mock_remote):
+                with patch('ray.get', return_value="Ray test successful"):
+                    result, message = test_ray_connectivity()
+                    self.assertTrue(result)
+                    self.assertEqual(message, "Ray test successful")
+                    # Verify that ray.remote was called with correct arguments
+                    mock_remote.assert_called_once_with(num_cpus=RAY_TASK_NUM_CPUS, max_retries=3)
+
+    def test_test_ray_connectivity_not_initialized(self):
+        """Test that test_ray_connectivity returns False when Ray is not initialized."""
+        with patch('ray.is_initialized', return_value=False):
+            result, message = test_ray_connectivity()
+            self.assertFalse(result)
+            self.assertIsNone(message)
+    
+    def test_test_ray_connectivity_no_resources(self):
+        """Test that test_ray_connectivity returns False when no resources are available."""
+        with patch('ray.is_initialized', return_value=True):
+            with patch('ray.cluster_resources', return_value={}):
+                result, message = test_ray_connectivity()
+                self.assertFalse(result)
+                self.assertIsNone(message)
 
 
 if __name__ == "__main__":

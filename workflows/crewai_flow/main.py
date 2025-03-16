@@ -17,12 +17,12 @@ from crewai.flow import Flow, listen, start
 # Import your crew classes here
 from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew
 from workflows.crewai_flow.data import SAMPLE_DATASETS
-from workflows.crewai_flow.utils import (
+from workflows.common.utils import (
     RAY_TASK_NUM_CPUS, RAY_TASK_MAX_RETRIES, RAY_TASK_TIMEOUT, 
     RAY_BATCH_SIZE, initialize_ray, shutdown_ray, test_ray_connectivity
 )
-from workflows.crewai_flow.formatters import format_output, extract_structured_data
-from workflows.crewai_flow.processors import (
+from workflows.common.formatters import format_output, extract_structured_data
+from workflows.common.processors import (
     create_fallback_response, handle_flow_error,
     process_with_ray_or_locally
 )

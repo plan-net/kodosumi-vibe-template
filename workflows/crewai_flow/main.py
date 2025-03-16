@@ -88,27 +88,15 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
     @listen(validate_inputs)
     def analyze_data(self):
         """
-        First step in the flow.
-        This step uses a CrewAI crew to analyze the dataset.
+        Analyze the selected dataset using CrewAI.
+        This step creates a crew of AI agents to analyze the data.
         """
-        print("Analyzing data...")
-        
-        # Get the selected dataset
         dataset = SAMPLE_DATASETS[self.state.dataset_name]
         
         try:
-            # Check if OpenAI API key is set and valid
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is not set")
-            
-            # Check if the API key is a placeholder
-            if api_key.startswith("your_") or api_key.startswith("sk-your_"):
-                raise ValueError("OPENAI_API_KEY is a placeholder value. Please set a valid API key.")
-            
             print(f"Using CrewAI to analyze {dataset['name']}...")
             
-            # Create the crew
+            # Create the crew (no output_format parameter needed)
             crew_instance = FirstCrew()
             crew = crew_instance.crew()
             
@@ -122,137 +110,38 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             # Run the crew
             crew_result = crew.kickoff(inputs=task_inputs)
             
-            # Parse the crew output
-            # The CrewOutput object structure is different than expected
+            # Use the structured output directly
             try:
-                # Print the crew_result to debug
-                print(f"CrewOutput type: {type(crew_result)}")
-                print(f"CrewOutput dir: {dir(crew_result)}")
-                
-                # Try to access the result directly
-                if hasattr(crew_result, 'result'):
-                    # If there's a result attribute, use it
-                    result_text = str(crew_result.result)
-                elif hasattr(crew_result, 'raw'):
-                    # If there's a raw attribute, use it
-                    result_text = str(crew_result.raw)
-                else:
-                    # Otherwise, convert the entire object to a string
-                    result_text = str(crew_result)
-                
-                print(f"Using result text: {result_text[:100]}...")
-                
-                # Parse the result text to extract summary, insights, and recommendations
-                # This is a simplified parsing approach - in a real application, you might want to use a more robust parsing method
-                lines = result_text.split('\n')
-                summary = ""
-                insights = []
-                recommendations = []
-                
-                current_section = None
-                for line in lines:
-                    line = line.strip()
-                    if "Summary" in line or "summary" in line:
-                        current_section = "summary"
-                        continue
-                    elif "Key Business Insights" in line or "Insights" in line or "insights" in line:
-                        current_section = "insights"
-                        continue
-                    elif "Actionable Recommendations" in line or "Recommendations" in line or "recommendations" in line:
-                        current_section = "recommendations"
-                        continue
+                # The last task's output is the BusinessInsightsOutput
+                if hasattr(crew_result, 'tasks_output') and len(crew_result.tasks_output) > 0:
+                    # Get the output from the last task (insights task)
+                    insights_output = crew_result.tasks_output[-1]
                     
-                    if current_section == "summary" and line:
-                        summary += line + " "
-                    elif current_section == "insights" and line and (line[0].isdigit() or line.startswith('-')):
-                        # Extract the insight text after the number or dash
-                        if line[0].isdigit() and '.' in line:
-                            insights.append(line[line.find(".")+1:].strip())
-                        elif line.startswith('-'):
-                            insights.append(line[1:].strip())
-                        else:
-                            insights.append(line.strip())
-                    elif current_section == "recommendations" and line and (line[0].isdigit() or line.startswith('-')):
-                        # Extract the recommendation text after the number or dash
-                        if line[0].isdigit() and '.' in line:
-                            recommendations.append(line[line.find(".")+1:].strip())
-                        elif line.startswith('-'):
-                            recommendations.append(line[1:].strip())
-                        else:
-                            recommendations.append(line.strip())
+                    # Store the structured output in the state
+                    self.state.analysis_results = {
+                        "summary": insights_output.summary,
+                        "insights": insights_output.insights,
+                        "recommendations": insights_output.recommendations
+                    }
+                else:
+                    # Fallback if tasks_output is not available
+                    raise ValueError("No structured output available from the crew")
                 
-                # If we couldn't parse the output properly, use default values
-                if not summary:
-                    summary = f"Analysis of {dataset['name']} dataset"
-                
-                if not insights:
-                    insights = ["No specific insights could be extracted from the analysis"]
-                
-                if not recommendations:
-                    recommendations = ["No specific recommendations could be extracted from the analysis"]
-                
-                self.state.analysis_results = {
-                    "summary": summary.strip(),
-                    "insights": insights,
-                    "recommendations": recommendations
-                }
+                print("CrewAI analysis completed successfully.")
             except Exception as parsing_error:
-                print(f"Error parsing crew output: {parsing_error}")
-                # Fall through to the fallback response
+                print(f"Error accessing crew output: {parsing_error}")
                 raise
-            
-            print("CrewAI analysis completed successfully.")
-            
+                
+            return process_insights_in_parallel
         except Exception as e:
-            # Fallback to simulated response if CrewAI fails
-            print(f"CrewAI analysis failed: {e}")
-            print(f"Using simulated response for {dataset['name']} dataset...")
-            
-            # Simulated analysis results based on the dataset
-            if self.state.dataset_name == "sales_data":
-                self.state.analysis_results = {
-                    "summary": f"Analysis of {dataset['name']} reveals distinct regional preferences for product categories, with Electronics showing the strongest overall performance, particularly in Q4.",
-                    "insights": [
-                        "Electronics is the highest-performing category, with peak sales in Q4 in the West region.",
-                        "Regional specialization exists across different product categories.",
-                        "Seasonal trends are evident, with Q4 showing the highest sales for Electronics.",
-                        "The North region demonstrates consistent performance across quarters.",
-                        "There's potential for growth in underperforming category-region combinations."
-                    ],
-                    "recommendations": [
-                        "Increase Electronics inventory in all regions for Q4 to capitalize on seasonal demand.",
-                        "Develop targeted marketing campaigns for Electronics in the West region.",
-                        "Investigate why South region has lower Electronics sales.",
-                        "Consider expanding Furniture offerings in the East and South regions.",
-                        "Implement cross-selling strategies in regions with single-category strength."
-                    ]
-                }
-            elif self.state.dataset_name == "customer_feedback":
-                self.state.analysis_results = {
-                    "summary": f"Analysis of {dataset['name']} indicates overall positive customer satisfaction with an average rating of 3.8 out of 5.",
-                    "insights": [
-                        "High ratings correlate with mentions of customer service and product quality.",
-                        "Mid-range ratings often mention good value but concerns about delivery times.",
-                        "Lower ratings frequently mention unmet expectations about the product.",
-                        "Shipping and delivery time is a recurring theme across all rating levels.",
-                        "Customers who mention 'value for money' tend to be satisfied overall."
-                    ],
-                    "recommendations": [
-                        "Enhance the shipping process to address the most common concern.",
-                        "Leverage positive customer service experiences in marketing materials.",
-                        "Improve product descriptions to better set customer expectations.",
-                        "Implement a follow-up system for customers who rate products below 3.0.",
-                        "Create a loyalty program for highly satisfied customers."
-                    ]
-                }
-        
-        print("Data analysis completed.")
+            print(f"Error during CrewAI analysis: {e}")
+            return handle_error
 
     @listen(analyze_data)
     def process_insights_in_parallel(self):
         """
-        Second step in the flow.
-        This step demonstrates how to parallelize processing of multiple items using Ray.
+        Process the insights in parallel.
+        This step prioritizes the insights based on their importance.
         """
         print("Processing insights in parallel...")
         
@@ -344,45 +233,102 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         print("========================\n")
         
         # Format the output based on the requested format
+        return self._format_output(self.state.final_insights)
+    
+    def _format_output(self, insights: Dict[str, Any]) -> Any:
+        """
+        Format the output based on the requested format (markdown or JSON).
+        This is the last step in the flow that ensures the output is in the desired format.
+        
+        Args:
+            insights: The insights to format
+            
+        Returns:
+            The formatted output (markdown string or JSON object)
+        """
         if self.state.output_format.lower() == "json":
             # For JSON format, return the raw data structure
-            return self.state.final_insights
+            return insights
         else:
             # For markdown format, convert the data to a formatted markdown string
-            return self._format_as_markdown(self.state.final_insights)
+            return self._format_as_markdown(insights)
     
     def _format_as_markdown(self, insights: Dict[str, Any]) -> str:
-        """Format the insights as a markdown string."""
-        dataset_name = SAMPLE_DATASETS[insights["dataset_analyzed"]]["name"]
+        """
+        Format the insights as a markdown string.
         
-        # Build the markdown output
-        md = [
-            f"# Analysis Results for {dataset_name}",
-            "",
-            f"*Analysis completed at: {insights['timestamp']}*",
-            "",
-            "## Summary",
-            "",
-            insights["summary"],
-            "",
-            "## Key Insights (Prioritized)",
-            ""
-        ]
+        Args:
+            insights: The insights to format
+            
+        Returns:
+            A markdown formatted string
+        """
+        dataset_name = insights.get("dataset_analyzed", "Unknown dataset")
+        timestamp = insights.get("timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
+        summary = insights.get("summary", "No summary available")
+        prioritized_insights = insights.get("prioritized_insights", [])
+        recommendations = insights.get("recommendations", [])
+        
+        markdown = f"""# Data Analysis Report: {dataset_name}
+
+## Summary
+{summary}
+
+## Key Insights
+"""
         
         # Add prioritized insights
-        for i, insight in enumerate(insights["prioritized_insights"], 1):
-            md.append(f"{i}. **{insight['insight']}** *(Priority: {insight['priority']})*")
-        
-        md.append("")
-        md.append("## Recommendations")
-        md.append("")
+        for i, insight in enumerate(prioritized_insights, 1):
+            priority = insight.get("priority", "Unknown")
+            insight_text = insight.get("insight", "No insight available")
+            markdown += f"{i}. **{insight_text}** (Priority: {priority})\n"
         
         # Add recommendations
-        for i, rec in enumerate(insights["recommendations"], 1):
-            md.append(f"{i}. {rec}")
+        markdown += "\n## Recommendations\n"
+        for i, recommendation in enumerate(recommendations, 1):
+            markdown += f"{i}. {recommendation}\n"
         
-        # Join all lines with newlines
-        return "\n".join(md)
+        # Add footer
+        markdown += f"\n\n*Generated on {timestamp}*"
+        
+        return markdown
+
+    def handle_error(self):
+        """
+        Handle errors that occur during the flow execution.
+        This method provides a graceful fallback when errors occur.
+        """
+        print("An error occurred during flow execution.")
+        
+        # Create a fallback response
+        dataset_name = self.state.dataset_name
+        dataset = SAMPLE_DATASETS.get(dataset_name, {"name": "Unknown dataset"})
+        
+        # Fallback analysis results
+        self.state.analysis_results = {
+            "summary": f"Unable to analyze {dataset['name']} due to an error.",
+            "insights": ["Error occurred during analysis."],
+            "recommendations": ["Please try again later."]
+        }
+        
+        # Fallback prioritized insights
+        self.state.parallel_processing_results = [
+            {"insight": "Error occurred during analysis.", "priority": "High"}
+        ]
+        
+        # Set final insights for output
+        self.state.final_insights = {
+            "summary": self.state.analysis_results["summary"],
+            "prioritized_insights": self.state.parallel_processing_results,
+            "recommendations": self.state.analysis_results["recommendations"],
+            "dataset_analyzed": self.state.dataset_name,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        print("Using fallback response due to error.")
+        
+        # Format the output based on the requested format
+        return self._format_output(self.state.final_insights)
 
 async def kickoff(inputs: dict = None):
     """

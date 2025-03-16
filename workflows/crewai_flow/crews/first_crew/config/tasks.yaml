@@ -1,0 +1,34 @@
+# Tasks configuration for the First Crew
+# This file defines the tasks performed by the agents in the data analysis crew
+
+analyze_data:
+  name: "Analyze Data"
+  agent: "data_analyst"
+  description: |
+    Analyze the following data and identify key patterns and trends:
+    
+    Dataset: {dataset_name}
+    Description: {dataset_description}
+    Sample data points: {sample_data}
+    
+    Provide a detailed analysis of the patterns and trends you observe.
+  expected_output: "A detailed analysis of the data with identified patterns and trends"
+  output_pydantic: "DataAnalysisOutput"
+
+generate_insights:
+  name: "Generate Insights and Recommendations"
+  agent: "insights_specialist"
+  description: |
+    Based on the data analysis provided, generate business insights and actionable recommendations.
+    
+    Analysis: {analysis_task.output}
+    
+    Provide:
+    1. A summary of the analysis
+    2. Key business insights
+    3. Actionable recommendations
+    
+    Format your response according to the requested output format.
+  expected_output: "Business insights and actionable recommendations based on the data analysis"
+  output_pydantic: "BusinessInsightsOutput"
+  context: ["analyze_data"] 

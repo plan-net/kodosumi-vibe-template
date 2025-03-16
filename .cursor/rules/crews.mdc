@@ -10,6 +10,7 @@ alwaysApply: false
 - make use of sequential processes by default
 - make sure to load the agents.yaml file as config
 - make sure to load the tasks.yaml file as config
+- make use of the crewai decorators like "@CrewBase", "@agent", "@taks" and "@crew"
 
 ## Recommended Patterns for Agents
 - always pick the best possible model from ChatGPT for each agent

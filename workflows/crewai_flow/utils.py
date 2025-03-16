@@ -5,7 +5,7 @@ Utility functions for the CrewAI flow.
 import os
 import sys
 import ray
-from typing import Optional
+from typing import Optional, Tuple, Any
 
 # Ray configuration from environment variables with defaults
 RAY_TASK_NUM_CPUS = float(os.environ.get("RAY_TASK_NUM_CPUS", "0.1"))
@@ -74,6 +74,39 @@ def initialize_ray(is_kodosumi: bool = False) -> bool:
         print(f"Error initializing Ray: {ray_init_error}")
         print("Continuing without Ray parallelization")
         return False
+
+def test_ray_connectivity() -> Tuple[bool, Any]:
+    """
+    Test if Ray is working properly by running a simple remote task.
+    
+    This function tests Ray connectivity by executing a simple remote function
+    and checking if it completes successfully within the timeout period.
+    
+    Returns:
+        Tuple[bool, Any]: A tuple containing:
+            - A boolean indicating whether the test was successful
+            - The result of the test task if successful, or None if failed
+    """
+    if not ray.is_initialized():
+        print("Ray is not initialized. Cannot test connectivity.")
+        return False, None
+    
+    try:
+        # Define a simple remote function for testing
+        @ray.remote(num_cpus=RAY_TASK_NUM_CPUS, max_retries=RAY_TASK_MAX_RETRIES)
+        def ray_test():
+            return "Ray test successful"
+        
+        # Run the test task with a timeout
+        result = ray.get(ray_test.remote(), timeout=RAY_TASK_TIMEOUT)
+        print(result)
+        return True, result
+    except (ray.exceptions.GetTimeoutError, TimeoutError) as e:
+        print(f"Ray test failed due to timeout: {e}")
+        return False, None
+    except Exception as e:
+        print(f"Ray test failed with error: {e}")
+        return False, None
 
 def shutdown_ray(is_kodosumi: bool = False):
     """

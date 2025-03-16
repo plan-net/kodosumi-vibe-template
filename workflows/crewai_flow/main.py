@@ -19,11 +19,12 @@ from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew
 from workflows.crewai_flow.data import SAMPLE_DATASETS
 from workflows.crewai_flow.utils import (
     RAY_TASK_NUM_CPUS, RAY_TASK_MAX_RETRIES, RAY_TASK_TIMEOUT, 
-    RAY_BATCH_SIZE, initialize_ray, shutdown_ray
+    RAY_BATCH_SIZE, initialize_ray, shutdown_ray, test_ray_connectivity
 )
 from workflows.crewai_flow.formatters import format_output, extract_structured_data
 from workflows.crewai_flow.processors import (
-    process_insights_locally, create_fallback_response, handle_flow_error
+    process_insights_locally, create_fallback_response, handle_flow_error,
+    process_with_ray_or_locally, process_insight
 )
 
 # Load environment variables from .env file
@@ -129,25 +130,15 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         insights = self.state.analysis_results.get("insights", [])
         
         try:
-            # Test if Ray is working
-            try:
-                @ray.remote(num_cpus=RAY_TASK_NUM_CPUS, max_retries=RAY_TASK_MAX_RETRIES)
-                def ray_test():
-                    return "Ray test successful"
-                
-                # Run a test task
-                test_result = ray.get(ray_test.remote(), timeout=RAY_TASK_TIMEOUT)
-                print(test_result)
-                
-                # Process insights in parallel using Ray
-                self.state.parallel_processing_results = self._process_insights_with_ray(insights)
-            except (ray.exceptions.GetTimeoutError, TimeoutError):
-                # Fallback to local processing if Ray test fails
-                print("Ray test failed. Falling back to local processing.")
-                self.state.parallel_processing_results = process_insights_locally(insights)
-        except Exception:
-            # Fallback to local processing if Ray fails
-            print("Ray processing failed. Falling back to local processing.")
+            # Process insights using the generalized function
+            self.state.parallel_processing_results = process_with_ray_or_locally(
+                items=insights,
+                process_func=process_insight,
+                batch_size=RAY_BATCH_SIZE
+            )
+        except Exception as e:
+            # Fallback to local processing if any error occurs
+            print(f"Processing failed: {e}. Falling back to local processing.")
             self.state.parallel_processing_results = process_insights_locally(insights)
         
         # Sort results by priority (highest first)
@@ -180,43 +171,6 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         
         # Format the output based on the requested format
         return format_output(self.state.final_insights, self.state.output_format)
-
-    def _process_insights_with_ray(self, insights):
-        """Process insights using Ray."""
-        # Define a remote function to process each insight
-        @ray.remote(num_cpus=RAY_TASK_NUM_CPUS, max_retries=RAY_TASK_MAX_RETRIES)
-        def process_insight(insight, index):
-            """Process a single insight using Ray."""
-            # Generate a priority score based on the insight
-            priority = random.randint(1, 10)
-            
-            return {
-                "insight": insight,
-                "priority": priority,
-                "processed_by": f"Worker-{index}"
-            }
-        
-        # Process insights in batches
-        processed_results = []
-        batch_size = RAY_BATCH_SIZE
-        
-        for i in range(0, len(insights), batch_size):
-            batch = insights[i:i+batch_size]
-            process_tasks = [process_insight.remote(insight, i+j) for j, insight in enumerate(batch)]
-            
-            try:
-                batch_results = ray.get(process_tasks, timeout=RAY_TASK_TIMEOUT)
-                processed_results.extend(batch_results)
-            except (ray.exceptions.GetTimeoutError, TimeoutError):
-                # Process this batch locally if timeout occurs
-                for j, insight in enumerate(batch):
-                    processed_results.append({
-                        "insight": insight,
-                        "priority": random.randint(1, 10),
-                        "processed_by": f"Local-{i+j}"
-                    })
-        
-        return processed_results
 
 async def kickoff(inputs: dict = None):
     """

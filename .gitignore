@@ -67,4 +67,5 @@ ray_logs/
 ray_spill/
 
 # Kodosumi specific
-.kodosumi/ 
+.kodosumi/
+data/ 

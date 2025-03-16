@@ -11,6 +11,7 @@ alwaysApply: false
 - never forget to set all ENV VARS in the config.yaml which are needed for the application
 - always make sure you have the GET "/" endpoint to render the HTML and capture the inputs
 - always makre sure you have the PPST "/" endpoint to start the flow execution with the form
+- the user can open the Ray Dashboard under http://localhost:8265/#/overview
 
  ## Avoid Patterns
  - Avoid using FastAPI directly, use kodosumi.serve.ServeAPI instead

@@ -7,6 +7,7 @@ import ray
 import sys
 import time
 import random
+import traceback
 from typing import List, Dict, Any, Optional
 
 from dotenv import load_dotenv
@@ -117,25 +118,110 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
                     # Get the output from the last task (insights task)
                     insights_output = crew_result.tasks_output[-1]
                     
-                    # Store the structured output in the state
-                    self.state.analysis_results = {
-                        "summary": insights_output.summary,
-                        "insights": insights_output.insights,
-                        "recommendations": insights_output.recommendations
-                    }
-                else:
-                    # Fallback if tasks_output is not available
-                    raise ValueError("No structured output available from the crew")
+                    print(f"Received output type: {type(insights_output).__name__}")
+                    
+                    # Try different methods to access the data
+                    if hasattr(insights_output, 'dict'):
+                        # Pydantic model
+                        output_dict = insights_output.dict()
+                        print("Using Pydantic model dict() method")
+                    elif hasattr(insights_output, '__dict__'):
+                        # Object with __dict__
+                        output_dict = insights_output.__dict__
+                        print("Using __dict__ attribute")
+                    elif hasattr(insights_output, 'model_dump'):
+                        # Newer Pydantic v2 models
+                        output_dict = insights_output.model_dump()
+                        print("Using model_dump() method")
+                    else:
+                        # Treat as dictionary directly
+                        output_dict = insights_output
+                        print("Treating output as dictionary directly")
+                    
+                    # Print available keys for debugging
+                    print(f"Available keys in output: {list(output_dict.keys()) if isinstance(output_dict, dict) else 'Not a dictionary'}")
+                    
+                    # Check if we have a json_dict field that contains the actual structured data
+                    if hasattr(insights_output, 'json_dict') and insights_output.json_dict:
+                        print("Found json_dict field, using it for structured data")
+                        json_data = insights_output.json_dict
+                        
+                        # Store the structured output in the state
+                        self.state.analysis_results = {
+                            "summary": json_data.get("summary", "No summary available"),
+                            "insights": json_data.get("insights", []),
+                            "recommendations": json_data.get("recommendations", [])
+                        }
+                    elif hasattr(insights_output, 'raw') and insights_output.raw:
+                        print("Found raw field, attempting to parse JSON from it")
+                        try:
+                            # Try to parse JSON from the raw output
+                            raw_text = insights_output.raw
+                            # Extract JSON part if it's embedded in markdown or other text
+                            if '{' in raw_text and '}' in raw_text:
+                                json_start = raw_text.find('{')
+                                json_end = raw_text.rfind('}') + 1
+                                json_str = raw_text[json_start:json_end]
+                                json_data = json.loads(json_str)
+                                
+                                # Store the structured output in the state
+                                self.state.analysis_results = {
+                                    "summary": json_data.get("summary", "No summary available"),
+                                    "insights": json_data.get("insights", []),
+                                    "recommendations": json_data.get("recommendations", [])
+                                }
+                            else:
+                                raise ValueError("No JSON found in raw output")
+                        except Exception as json_error:
+                            print(f"Error parsing JSON from raw output: {json_error}")
+                            # Use the summary directly from output_dict if available
+                            self.state.analysis_results = {
+                                "summary": output_dict.get("summary", "No summary available"),
+                                "insights": [],
+                                "recommendations": []
+                            }
+                    else:
+                        # Try to extract data directly from the output
+                        try:
+                            # Try to access the output directly as a string and parse it
+                            output_str = str(insights_output)
+                            if '{' in output_str and '}' in output_str:
+                                json_start = output_str.find('{')
+                                json_end = output_str.rfind('}') + 1
+                                json_str = output_str[json_start:json_end]
+                                json_data = json.loads(json_str)
+                                
+                                # Store the structured output in the state
+                                self.state.analysis_results = {
+                                    "summary": json_data.get("summary", "No summary available"),
+                                    "insights": json_data.get("insights", []),
+                                    "recommendations": json_data.get("recommendations", [])
+                                }
+                                print("Successfully parsed JSON from output string")
+                            else:
+                                # Use the output_dict directly
+                                self.state.analysis_results = {
+                                    "summary": output_dict.get("summary", "No summary available"),
+                                    "insights": output_dict.get("insights", []),
+                                    "recommendations": output_dict.get("recommendations", [])
+                                }
+                        except Exception as e:
+                            print(f"Error extracting data from output: {e}")
+                            raise ValueError("No structured output available from the crew")
                 
                 print("CrewAI analysis completed successfully.")
             except Exception as parsing_error:
                 print(f"Error accessing crew output: {parsing_error}")
-                raise
+                print(f"Error type: {type(parsing_error).__name__}")
+                print(f"Traceback: {traceback.format_exc()}")
+                return self.handle_error()
                 
-            return process_insights_in_parallel
+            return self.process_insights_in_parallel
         except Exception as e:
             print(f"Error during CrewAI analysis: {e}")
-            return handle_error
+            print(f"Error type: {type(e).__name__}")
+            print(f"Traceback: {traceback.format_exc()}")
+            return self.handle_error()
 
     @listen(analyze_data)
     def process_insights_in_parallel(self):
@@ -155,11 +241,11 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         # Process insights using Ray
         try:
             # Define a remote function to process each insight
-            @ray.remote
+            @ray.remote(num_cpus=0.1, max_retries=3)  # Use minimal resources and allow retries
             def process_insight(insight, index):
                 """Process a single insight using Ray."""
-                # Simulate some processing time
-                time.sleep(random.uniform(0.5, 1.0))
+                # Minimal processing time to reduce chance of timeouts
+                time.sleep(0.05)
                 
                 # Generate a priority score based on the insight
                 priority = random.randint(1, 10)
@@ -170,11 +256,32 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
                     "processed_by": f"Worker-{index}"
                 }
             
-            # Process all insights in parallel
+            # Process insights in smaller batches to reduce chance of timeouts
             print("Using Ray for parallel processing...")
-            process_tasks = [process_insight.remote(insight, i) for i, insight in enumerate(insights)]
-            processed_results = ray.get(process_tasks)
+            processed_results = []
             
+            # Process in very small batches (1 insight at a time) to minimize timeout issues
+            batch_size = 1
+            for i in range(0, len(insights), batch_size):
+                batch = insights[i:i+batch_size]
+                process_tasks = [process_insight.remote(insight, i+j) for j, insight in enumerate(batch)]
+                
+                try:
+                    # Use a shorter timeout for each batch
+                    batch_results = ray.get(process_tasks, timeout=3.0)
+                    processed_results.extend(batch_results)
+                    print(f"Successfully processed batch {i//batch_size + 1} with {len(batch)} insights")
+                except (ray.exceptions.GetTimeoutError, TimeoutError) as timeout_err:
+                    print(f"Batch {i//batch_size + 1} timed out: {timeout_err}. Processing remaining insights locally...")
+                    # Process the remaining insights locally
+                    for j, insight in enumerate(batch):
+                        processed_results.append({
+                            "insight": insight,
+                            "priority": random.randint(1, 10),
+                            "processed_by": f"Local-{i+j}"
+                        })
+            
+            print(f"Successfully processed {len(processed_results)} insights in total")
         except Exception as e:
             # Fallback to local processing if Ray fails
             print(f"Ray processing failed: {e}. Falling back to local processing...")
@@ -330,6 +437,34 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         # Format the output based on the requested format
         return self._format_output(self.state.final_insights)
 
+    def _process_insights_locally(self, insights):
+        """
+        Process insights locally without using Ray.
+        
+        Args:
+            insights: List of insights to process
+            
+        Returns:
+            List of processed insights with priority scores
+        """
+        print("Processing insights locally...")
+        processed_results = []
+        for i, insight in enumerate(insights):
+            # Minimal processing time
+            time.sleep(0.05)
+            
+            # Generate a priority score
+            priority = random.randint(1, 10)
+            
+            processed_results.append({
+                "insight": insight,
+                "priority": priority,
+                "processed_by": f"Local-{i}"
+            })
+        
+        print(f"Completed local processing for {len(processed_results)} insights.")
+        return processed_results
+
 async def kickoff(inputs: dict = None):
     """
     Kickoff function for the flow.
@@ -337,8 +472,44 @@ async def kickoff(inputs: dict = None):
     """
     # Initialize Ray if not already initialized and not in Kodosumi environment
     if not ray.is_initialized() and not is_kodosumi:
+        # Apply patch for Ray's FilteredStream isatty error
+        try:
+            import sys
+            class PatchedStream:
+                def __init__(self, stream):
+                    self.stream = stream
+                
+                def __getattr__(self, attr):
+                    if attr == 'isatty':
+                        return lambda: False
+                    return getattr(self.stream, attr)
+                
+                def write(self, *args, **kwargs):
+                    return self.stream.write(*args, **kwargs)
+                
+                def flush(self):
+                    return self.stream.flush()
+            
+            # Apply the patch to stdout and stderr
+            sys.stdout = PatchedStream(sys.stdout)
+            sys.stderr = PatchedStream(sys.stderr)
+            print("Applied patch for Ray's FilteredStream isatty error")
+        except Exception as e:
+            print(f"Failed to apply Ray patch: {e}")
+        
         print("Initializing local Ray instance")
-        ray.init()
+        try:
+            # Try to connect to an existing Ray cluster first
+            try:
+                ray.init(address="auto", ignore_reinit_error=True)
+                print("Connected to existing Ray cluster")
+            except (ConnectionError, ValueError):
+                # If connecting fails, start a new Ray instance with minimal resources
+                ray.init(num_cpus=2, dashboard_port=None, ignore_reinit_error=True)
+                print("Started new Ray instance with minimal resources")
+        except Exception as ray_init_error:
+            print(f"Error initializing Ray: {ray_init_error}")
+            print("Continuing without Ray parallelization")
     
     # Create the flow
     flow = CrewAIFlow()

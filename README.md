@@ -26,10 +26,10 @@ A template for building AI workflows with CrewAI and Kodosumi.
 4. **Run Example Flow**
    ```bash
    # Run the example flow directly
-   python -m workflows.crewai_flow.main
+   python -m workflows.example.main
 
    # Or run with test data
-   python -m workflows.crewai_flow.main --dataset example_data
+   python -m workflows.example.main --dataset example_data
    ```
 
    For Kodosumi deployment, see the [Deployment Guide](docs/deployment.md).
@@ -93,7 +93,7 @@ This template includes specialized Cursor rules that provide AI-assisted develop
 ```
 workflows/
 ├── common/              # Shared utilities
-├── crewai_flow/        # Example CrewAI flow
+├── example/            # Example CrewAI flow
 │   ├── agents/         # Agent definitions
 │   ├── crews/          # Crew definitions
 │   ├── tasks/          # Task definitions

@@ -115,17 +115,10 @@ cd ..
 
 ## Verification
 
-To verify your installation:
-
-1. Run the tests:
-   ```bash
-   python -m pytest tests/
-   ```
-
-2. Try the example workflow:
-   ```bash
-   python -m workflows.crewai_flow.main
-   ```
+Run the example flow:
+```bash
+python -m workflows.example.main
+```
 
 ## Troubleshooting
 

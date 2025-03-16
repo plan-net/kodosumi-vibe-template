@@ -8,10 +8,12 @@ import random
 import ray
 from typing import Dict, Any, List, TypeVar, Callable
 
-from workflows.crewai_flow.data import SAMPLE_DATASETS
-from workflows.crewai_flow.formatters import format_output
-from workflows.crewai_flow.utils import (
+from workflows.example.data import SAMPLE_DATASETS
+from workflows.example.formatters import format_output
+from workflows.example.utils import (
     RAY_TASK_NUM_CPUS, RAY_TASK_MAX_RETRIES, RAY_TASK_TIMEOUT, RAY_BATCH_SIZE,
+    initialize_ray,
+    shutdown_ray,
     test_ray_connectivity
 )
 

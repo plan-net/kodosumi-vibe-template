@@ -13,9 +13,9 @@ logging_config:
   logs_dir: null
   enable_access_log: true
 applications:
-- name: crewai_flow
-  route_prefix: /crewai_flow
-  import_path: workflows.crewai_flow.serve:fast_app
+- name: example
+  route_prefix: /example
+  import_path: workflows.example.serve:fast_app
   runtime_env:
     env_vars:
       PYTHONPATH: .

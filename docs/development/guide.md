@@ -17,17 +17,15 @@ workflows/
 │   ├── formatters.py    # Output formatting utilities
 │   ├── processors.py    # Data processing utilities
 │   └── utils.py         # General utilities
-├── crewai_flow/
+├── example/
 │   ├── agents/          # Agent definitions
 │   ├── crews/           # Crew definitions
-│   │   └── first_crew/  # Example crew implementation
 │   ├── tasks/           # Task definitions
-│   ├── tools/          # Tool definitions
-│   ├── templates/      # HTML templates for web interface
-│   ├── __init__.py
-│   ├── main.py        # Flow implementation
-│   └── serve.py       # Kodosumi service definition
-└── another_flow/      # Another workflow package
+│   ├── tools/           # Tool definitions
+│   ├── templates/       # HTML templates for web interface
+│   ├── main.py          # Flow implementation
+│   └── serve.py         # Kodosumi service definition
+└── another_flow/        # Another workflow package
 ```
 
 ## Creating a New Workflow

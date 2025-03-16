@@ -1,6 +1,4 @@
-# Kodosumi Deployment Guide
-
-## Overview
+# Deployment Guide
 
 This guide explains how to deploy your CrewAI flows using Kodosumi, which provides:
 - Web interface for your flows
@@ -10,9 +8,7 @@ This guide explains how to deploy your CrewAI flows using Kodosumi, which provid
 
 ## Configuration
 
-### Basic Configuration
-
-The `config.yaml` file contains your Kodosumi deployment configuration:
+Create a `config.yaml` file in your project root:
 
 ```yaml
 proxy_location: EveryNode
@@ -28,14 +24,13 @@ logging_config:
   logs_dir: null
   enable_access_log: true
 applications:
-- name: crewai_flow
-  route_prefix: /crewai_flow
-  import_path: workflows.crewai_flow.serve:fast_app
+- name: example
+  route_prefix: /example
+  import_path: workflows.example.serve:fast_app
   runtime_env:
     env_vars:
       PYTHONPATH: .
-      OPENAI_API_KEY: your_openai_api_key_here
-      OTEL_SDK_DISABLED: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     pip:
     - crewai==0.105.0
 ```
@@ -56,10 +51,10 @@ Deploy multiple flows in one configuration:
 
 ```yaml
 applications:
-- name: crewai_flow
-  route_prefix: /crewai_flow
-  import_path: workflows.crewai_flow.serve:fast_app
-  # ... configuration for crewai_flow ...
+- name: example
+  route_prefix: /example
+  import_path: workflows.example.serve:fast_app
+  # ... configuration for example ...
 
 - name: another_flow
   route_prefix: /another_flow
@@ -69,83 +64,67 @@ applications:
 
 ## Deployment Steps
 
-### 1. Local Deployment
-
-```bash
-# Start Ray cluster (if not running)
-ray start --head
-
-# Start Kodosumi spooler
-python -m kodosumi.cli spool
-
-# Deploy with Ray Serve
-serve deploy ./config.yaml
-
-# Start Kodosumi services
-python -m kodosumi.cli serve
-
-# Access at http://localhost:3370
-```
-
-### 2. Production Deployment
-
-1. **Prepare Configuration**
-   - Create `production_config.yaml`
-   - Set appropriate host/ports
-   - Configure SSL if needed
-   - Set production API keys
-
-2. **Deploy**
+1. **Start Ray**
    ```bash
-   # Deploy to production Ray cluster
-   serve deploy ./production_config.yaml
+   ray start --head
    ```
 
-3. **Monitor**
-   - Check Ray dashboard
-   - Monitor logs
-   - Set up health checks
+2. **Start Kodosumi Spooler**
+   ```bash
+   python -m kodosumi.cli spool
+   ```
 
-## Web Interface
+3. **Deploy Your Flow**
+   ```bash
+   serve deploy config.yaml
+   ```
 
-Your flows will be available at:
-- Local: `http://localhost:3370/crewai_flow`
-- Production: `https://your-domain.com/crewai_flow`
+4. **Start Kodosumi Server**
+   ```bash
+   python -m kodosumi.cli serve
+   ```
 
-### Features
-- Parameter input forms
-- Output format selection
-- Task status monitoring
-- Result display
+## Accessing Your Flow
+
+Your flow will be available at:
+- Local: `http://localhost:3370/example`
+- Production: `https://your-domain.com/example`
+
+## Monitoring
+
+Check the status of your deployment:
+```bash
+serve status
+```
+
+View logs:
+```bash
+serve logs example
+```
 
 ## API Access
 
-### REST API
-
+Check status:
 ```bash
-# Get flow status
-curl http://localhost:8001/crewai_flow/status
-
-# Run flow with parameters
-curl -X POST http://localhost:8001/crewai_flow/ \
-  -H "Content-Type: application/json" \
-  -d '{"dataset_name": "customer_feedback", "output_format": "json"}'
+curl http://localhost:8001/example/status
 ```
 
-### Python Client
+Run flow:
+```bash
+curl -X POST http://localhost:8001/example/ \
+  -H "Content-Type: application/json" \
+  -d '{"datasets": ["example_data"]}'
+```
 
+Python client:
 ```python
 import requests
 
-# Run flow
 response = requests.post(
-    "http://localhost:8001/crewai_flow/",
-    json={
-        "dataset_name": "customer_feedback",
-        "output_format": "json"
-    }
+    "http://localhost:8001/example/",
+    json={"datasets": ["example_data"]}
 )
-result = response.json()
+print(response.json())
 ```
 
 ## Monitoring and Maintenance

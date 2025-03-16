@@ -3,7 +3,7 @@ import json
 import pytest
 from unittest.mock import patch, MagicMock
 
-from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew, DataAnalysisOutput, BusinessInsightsOutput
+from workflows.example.crews.first_crew.first_crew import FirstCrew, DataAnalysisOutput, BusinessInsightsOutput
 from workflows.common.formatters import format_output
 from workflows.common.processors import process_with_ray_or_locally
 from workflows.common.utils import initialize_ray

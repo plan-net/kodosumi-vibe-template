@@ -48,25 +48,10 @@ class CrewAIFlowService:
         Extracts parameters from the form and launches the flow.
         """
         form_data = await request.form()
-        
-        # Extract dataset selection from the form
-        dataset_name = str(form_data.get("dataset_name", "sales_data"))
-        
-        # Extract output format from the form
-        output_format = str(form_data.get("output_format", "markdown"))
-        
-        # Validate dataset
-        if dataset_name not in AVAILABLE_DATASETS:
-            dataset_name = "sales_data"  # Default to sales_data if invalid
-        
-        # Validate output format
-        if output_format not in ["markdown", "json"]:
-            output_format = "markdown"  # Default to markdown if invalid
-        
-        # Launch the flow with the selected dataset and output format
-        return Launch(request, "workflows.crewai_flow.main:kickoff", {
-            "dataset_name": dataset_name,
-            "output_format": output_format
+        datasets = form_data.getlist("datasets")
+        return Launch(request, "workflows.example.main:kickoff", {
+            "datasets": datasets,
+            "output_format": form_data.get("output_format", "markdown")
         })
 
 # Bind the service to Ray Serve

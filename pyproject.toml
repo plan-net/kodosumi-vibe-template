@@ -60,7 +60,7 @@ package-dir = {"" = "."}
 packages = ["workflows"]
 
 [tool.setuptools.package-data]
-"workflows.crewai_flow.templates" = ["*.html"]
+"workflows.example.templates" = ["*.html"]
 
 [tool.black]
 line-length = 88

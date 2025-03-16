@@ -1,12 +1,59 @@
 ---
 description: When you are creating forms for data entry as part of kodosumi
-globs: *.html
+globs: "**/*.html,**/templates/**/*.html"
 alwaysApply: false
 ---
 
-# HTML Related Instructions
+# HTML Guidelines for Kodosumi Forms
 
-- keep using the templating language Jinja2Templates
-- don't change the [_base.html](mdc:workflows/crewai_flow/templates/_base.html)
-- only expand the [form.html](mdc:workflows/crewai_flow/templates/form.html) to capture all required input paramters for the CrewAI flow
-- make choosing the output format (markdown or json) always a dropdown menu in the form
+## General Principles
+- Use semantic HTML5 elements
+- Ensure forms are accessible with proper labels and ARIA attributes
+- Follow responsive design principles
+- Use Bootstrap for consistent styling
+
+## Form Structure
+- Use the POST method for all forms
+- Include CSRF protection when needed
+- Group related fields with fieldset elements
+- Provide clear error messages for validation
+
+## Kodosumi-Specific Elements
+- Always include an output_format field in forms
+- Use select elements for predefined options
+- Include help text for complex fields
+- Use appropriate input types for different data types
+
+## Example Form
+```html
+<form method="post" class="needs-validation" novalidate>
+  <div class="form-group mb-3">
+    <label for="dataset_name" class="form-label">Dataset Name</label>
+    <select class="form-select" id="dataset_name" name="dataset_name" required>
+      <option value="" selected disabled>Select a dataset</option>
+      <option value="customer_feedback">Customer Feedback</option>
+      <option value="sales_data">Sales Data</option>
+    </select>
+    <div class="invalid-feedback">Please select a dataset.</div>
+  </div>
+  
+  <div class="form-group mb-3">
+    <label for="output_format" class="form-label">Output Format</label>
+    <select class="form-select" id="output_format" name="output_format">
+      <option value="markdown">Markdown (Human-readable)</option>
+      <option value="json">JSON (Machine-readable)</option>
+    </select>
+    <small class="form-text text-muted">
+      Markdown is best for human reading, JSON for programmatic use.
+    </small>
+  </div>
+  
+  <button type="submit" class="btn btn-primary">Analyze Data</button>
+</form>
+```
+
+## Results Display
+- For markdown output, use a container with proper styling
+- For JSON output, use a pre tag with syntax highlighting
+- Include a loading indicator for long-running processes
+- Provide a way to download results in different formats

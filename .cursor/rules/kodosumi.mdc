@@ -1,17 +1,67 @@
 ---
 description: When setting up and testing with Kodosumi
-globs: 
+globs: "**/serve*.py,**/config*.yaml,**/kodosumi/**/*.py"
 alwaysApply: false
 ---
-# Kodosumi related instruction
 
-## Recommended Patterns
-- keep the [config.yaml](mdc:config.yaml) on point with human readable names in line with the project name for name and route
-- always use as the import_path the [serve.py](mdc:workflows/crewai_flow/serve.py) fastapp, which is the Ray Serve binding
-- never forget to set all ENV VARS in the config.yaml which are needed for the application
-- always make sure you have the GET "/" endpoint to render the HTML and capture the inputs
-- always makre sure you have the PPST "/" endpoint to start the flow execution with the form
-- the user can open the Ray Dashboard under http://localhost:8265/#/overview
+# Kodosumi Integration for CrewAI Flows
 
- ## Avoid Patterns
- - Avoid using FastAPI directly, use kodosumi.serve.ServeAPI instead
+## Local Development Setup
+1. Create a virtual environment: `python -m venv venv`
+2. Activate the environment: 
+   - Windows: `venv\Scripts\activate`
+   - Unix/MacOS: `source venv/bin/activate`
+3. Install dependencies: `pip install -e .`
+4. Start Ray: `ray start --head`
+5. Verify Ray is running: `ray status`
+
+## Deployment Process
+1. Start the Kodosumi spooler:
+   ```bash
+   python -m kodosumi.cli spool
+   ```
+
+2. Deploy with Ray Serve:
+   ```bash
+   serve deploy ./config.yaml
+   ```
+
+3. Start the Kodosumi web interface:
+   ```bash
+   python -m kodosumi.cli serve
+   ```
+
+4. Access the web interface at http://localhost:3370
+
+## Configuration
+- Update `config.yaml` with your workflow configuration:
+  ```yaml
+  applications:
+    - name: crewai_flow
+      route_prefix: /crewai_flow
+      import_path: workflows.crewai_flow.serve:fast_app
+      runtime_env:
+        env_vars:
+          OPENAI_API_KEY: ${OPENAI_API_KEY}
+          EXA_API_KEY: ${EXA_API_KEY}
+          OTEL_SDK_DISABLED: "true"
+  ```
+
+- Set up environment variables in `.env` file:
+  ```
+  OPENAI_API_KEY=your_api_key_here
+  EXA_API_KEY=your_api_key_here
+  ```
+
+## Troubleshooting
+- If Ray is not connecting, check if Ray is running with `ray status`
+- If deployment fails, check the Ray Serve logs with `serve logs crewai_flow`
+- If the web interface shows errors, check the Kodosumi service logs
+- For API endpoint issues, try direct access with `curl http://localhost:8001/crewai_flow/`
+
+## Best Practices
+- Always test locally before deploying
+- Use environment variables for API keys
+- Monitor Ray dashboard at http://localhost:8265
+- Keep the Kodosumi spooler running for background tasks
+- Restart services in the correct order if issues occur 

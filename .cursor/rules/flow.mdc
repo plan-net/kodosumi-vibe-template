@@ -1,30 +1,195 @@
 ---
 description: When developing the CrewAI flow
-globs: main.py
+globs: "**/flow*.py,**/main.py,**/workflows/**/*.py"
 alwaysApply: false
 ---
-# Flow Development in Crewai
 
-## Recommended Patterns
+# CrewAI Flow Development Guidelines
 
-### Ray Related
-- Prefer Ray's remote functions for parallelization
-- Use Ray's actor model for stateful computations
-- Use the __main__ block in flow modules to enable local testing with Ray
-- The __main__ block will only be called if executed locally, but not when running on Kodosumi
+## Flow Structure
+- Implement flows as classes that inherit from `Flow[StateType]`
+- Define a state model using Pydantic BaseModel
+- Include methods for each step in the flow
+- Use the `@start()` decorator for the entry point
+- Use the `@listen()` decorator for subsequent steps
+- Support both synchronous and asynchronous execution
 
-### CrewAI Related
-- Implement CrewAI crews for complex AI agent tasks
-- Always include output_format parameter in CrewAI flows with markdown as default
-- make sure to consider the rules for single Crews defined in crews.mdc
+## Output Format Handling
+- Always include `output_format` in your state model
+- Support both 'markdown' and 'json' formats
+- Validate the output format in the initial step
+- Provide helper methods for formatting output
 
-### Flow Related
-- make sure to track in the global flow state the desired output format for the flow
-- the desired output format can either be "markdown" or "json"
-- this desired output should be by default "markdown", but it can be overwritten with "json"
-- make sure that the last step in the flow actually returns the desired output format
+## Error Handling
+- Implement proper error handling for each step
+- Use try/except blocks for critical operations
+- Provide fallback responses for error cases
+- Log errors with appropriate detail
 
-## Avoid Patterns
-- Avoid using threading or multiprocessing directly, prefer Ray instead
- 
+## Example Flow Implementation
+```python
+import json
+import os
+import time
+import random
+from typing import List, Dict, Any
 
+from pydantic import BaseModel
+from crewai.flow import Flow, listen, start
+
+# Import your crew classes and utility functions
+from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew
+from workflows.crewai_flow.formatters import format_output, extract_structured_data
+from workflows.crewai_flow.processors import process_with_ray_or_locally
+
+class CrewAIFlowState(BaseModel):
+    """
+    Define your flow state here.
+    This will hold all the data that is passed between steps in the flow.
+    """
+    dataset_name: str = "customer_feedback"  # Default dataset
+    output_format: str = "markdown"   # Default output format (markdown or json)
+    analysis_results: Dict[str, Any] = {}
+    parallel_processing_results: List[Dict[str, Any]] = []
+    final_insights: Dict[str, Any] = {}
+
+class CrewAIFlow(Flow[CrewAIFlowState]):
+    """
+    Define your flow steps here.
+    Each step is a method decorated with @listen that takes the output of a previous step.
+    """
+
+    @start()
+    def validate_inputs(self):
+        """
+        Validate the inputs to the flow.
+        This is the first step in the flow.
+        """
+        print("Validating inputs...")
+        
+        # Check if the dataset exists
+        if self.state.dataset_name not in SAMPLE_DATASETS:
+            print(f"Dataset '{self.state.dataset_name}' not found. Using default dataset.")
+            self.state.dataset_name = "customer_feedback"
+        
+        print(f"Using dataset: {self.state.dataset_name}")
+
+    @listen(validate_inputs)
+    def analyze_data(self):
+        """
+        Analyze the selected dataset using CrewAI.
+        """
+        dataset = SAMPLE_DATASETS[self.state.dataset_name]
+        
+        try:
+            print(f"Using CrewAI to analyze {dataset['name']}...")
+            
+            # Create and run the crew
+            crew_instance = FirstCrew()
+            crew = crew_instance.crew()
+            
+            # Prepare the task inputs with dataset information
+            task_inputs = {
+                "dataset_name": dataset["name"],
+                "dataset_description": dataset["description"],
+                "sample_data": json.dumps(dataset["sample"], indent=2)
+            }
+            
+            # Run the crew and get the result
+            crew_result = crew.kickoff(inputs=task_inputs)
+            
+            # Extract structured data from the crew result
+            json_data = extract_structured_data(crew_result)
+            
+            if json_data:
+                # Store the structured output in the state
+                self.state.analysis_results = {
+                    "summary": json_data.get("summary", "No summary available"),
+                    "insights": json_data.get("insights", []),
+                    "recommendations": json_data.get("recommendations", [])
+                }
+                print("CrewAI analysis completed successfully.")
+                return self.process_insights_in_parallel
+            else:
+                print("No structured output available from the crew.")
+                # Call the utility function directly instead of using a wrapper method
+                return handle_flow_error(self.state, self.state.output_format)
+        except Exception as e:
+            print(f"Error during CrewAI analysis: {e}")
+            # Call the utility function directly instead of using a wrapper method
+            return handle_flow_error(self.state, self.state.output_format)
+
+    @listen(analyze_data)
+    def process_insights_in_parallel(self):
+        """
+        Process insights in parallel using Ray.
+        This step takes the insights from the analysis and processes them in parallel.
+        """
+        print("Processing insights in parallel...")
+        
+        # Extract insights from the analysis results
+        insights = self.state.analysis_results.get("insights", [])
+        
+        try:
+            # Process insights using the generalized function
+            # This will automatically use Ray if available, or fall back to local processing
+            self.state.parallel_processing_results = process_with_ray_or_locally(
+                items=insights,
+                process_func=self.process_insight,
+                batch_size=RAY_BATCH_SIZE
+            )
+        except Exception as e:
+            # If the generic processing function fails completely, create a minimal result
+            print(f"Processing failed completely: {e}. Creating minimal results.")
+            self.state.parallel_processing_results = [
+                {
+                    "insight": "Error processing insights.",
+                    "priority": 10,
+                    "processed_by": "Error-Handler"
+                }
+            ]
+        
+        # Sort results by priority (highest first)
+        self.state.parallel_processing_results = sorted(
+            self.state.parallel_processing_results, 
+            key=lambda x: x["priority"], 
+            reverse=True
+        )
+        
+        print(f"Processed {len(self.state.parallel_processing_results)} insights.")
+
+    def process_insight(self, insight: str, index: int) -> Dict[str, Any]:
+        """
+        Process a single insight, generating a priority score.
+        """
+        # Generate a priority score based on the insight content
+        priority = random.randint(1, 10)
+        
+        return {
+            "insight": insight,
+            "priority": priority,
+            "processed_by": f"Worker-{index}"
+        }
+
+    @listen(process_insights_in_parallel)
+    def finalize_results(self):
+        """
+        Final step in the flow.
+        This step aggregates the results from previous steps.
+        """
+        print("Finalizing results...")
+        
+        # Combine the original analysis with the prioritized insights
+        self.state.final_insights = {
+            "summary": self.state.analysis_results.get("summary", "No summary available"),
+            "prioritized_insights": self.state.parallel_processing_results,
+            "recommendations": self.state.analysis_results.get("recommendations", []),
+            "dataset_analyzed": self.state.dataset_name,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        print("Flow completed successfully!")
+        
+        # Format the output based on the requested format
+        return format_output(self.state.final_insights, self.state.output_format)
+``` 

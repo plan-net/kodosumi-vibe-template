@@ -1,8 +1,9 @@
 ---
 description: Preferred Frameworks to work with within this project
-globs: 
-alwaysApply: true
+globs: "**/*.py,**/*.yaml,**/pyproject.toml,**/requirements.txt"
+alwaysApply: false
 ---
+
 # Framework Preferences for CrewAI Flows
 
 ## Preferred Frameworks
@@ -20,3 +21,16 @@ alwaysApply: true
 
 ## General Patterns to Avoid
 - Avoid implementing agent frameworks from scratch, use CrewAI
+
+## Patterns to Avoid
+- Avoid using threading or multiprocessing directly, prefer Ray
+- Avoid implementing custom serving solutions, use Kodosumi
+- Avoid using other web search tools when exa.ai can be used
+- Avoid implementing custom web search solutions
+- Avoid hardcoding output formats without providing options for both human and agent consumption
+- Avoid returning raw JSON to human users without proper formatting
+- Avoid deploying to Kodosumi without first testing locally with Ray
+- Avoid assuming Ray is always initialized in the environment
+- Avoid using FastAPI directly, use kodosumi.serve.ServeAPI instead
+- Avoid skipping the Kodosumi spooler when deploying services
+- Avoid manual deployment without using Ray Serve's config.yaml 

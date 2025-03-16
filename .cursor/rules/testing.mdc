@@ -1,26 +1,81 @@
 ---
 description: When you want to run and test the application
-globs: 
+globs: "**/test_*.py,**/tests/**/*.py,**/pytest*.ini"
 alwaysApply: false
 ---
- # Testing Strategy
 
- ## First Step: Running locally with Ray
- - always run the application on the local Ray Cluster first
- - for this just call the __main__ block in the main flow file
- - make sure the Ray Head is already running in the background
- - if not start it with "ray start --head" in the terminal first before you test it
- - sometimes it helps to execute "ray stop" and start the head again if you run into unexpected ray related problems
+# Testing Guidelines for CrewAI Flows
 
- ## Second Step: Deploying in local or remote Kodosumi (optional)
- - only if the local test succeeds ask the user if you should deploy to Kodosumi too
- - when testing on Kodosumi locally the Ray Head and the Kodosumu Spooler must be running
- - you need to deploy the [config.yaml](mdc:config.yaml) file to Kodosumi
- - you only need to redeploy the [config.yaml](mdc:config.yaml) if you have made changes to it
+## Test Structure
+- Organize tests in a `tests/` directory that mirrors the project structure
+- Create test files with the `test_` prefix
+- Group related tests in classes with the `Test` prefix
+- Use descriptive test names that explain what is being tested
 
+## Test Types
+- **Unit Tests**: Test individual functions and methods in isolation
+- **Integration Tests**: Test interactions between components
+- **Flow Tests**: Test complete CrewAI flows end-to-end
+- **API Tests**: Test the Kodosumi API endpoints
 
- ## Avoid Patterns
- - Avoid assuming Ray is always initialized in the environment
- - Avoid starting and stopping the Spooler every time
+## Testing CrewAI Components
+- Mock LLM calls to avoid API costs during testing
+- Test agent creation and configuration
+- Test task creation and dependencies
+- Test crew assembly and execution flow
 
- 
+## Testing Ray Integration
+- Test Ray remote function execution
+- Test parallel processing with Ray
+- Mock Ray for unit tests to avoid cluster dependencies
+- Test Ray cluster connectivity handling
+
+## Example Test Structure
+```python
+import pytest
+from unittest.mock import patch, MagicMock
+
+from workflows.crewai_flow.main import CrewAIFlow, CrewAIFlowState
+
+class TestCrewAIFlow:
+    """Tests for the CrewAIFlow class."""
+    
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.state = CrewAIFlowState(
+            dataset_name="test_dataset",
+            output_format="markdown"
+        )
+        self.flow = CrewAIFlow(self.state)
+    
+    @patch("workflows.crewai_flow.main.ray")
+    def test_process_insights_in_parallel(self, mock_ray):
+        """Test that insights are processed in parallel with Ray."""
+        # Setup mock
+        mock_ray.get.return_value = ["processed_insight_1", "processed_insight_2"]
+        
+        # Execute
+        result = self.flow.process_insights_in_parallel()
+        
+        # Assert
+        assert mock_ray.get.called
+        assert result is not None
+    
+    def test_format_as_markdown(self):
+        """Test markdown formatting of results."""
+        # Setup
+        self.flow.results = {"key": "value"}
+        
+        # Execute
+        markdown = self.flow._format_as_markdown()
+        
+        # Assert
+        assert "# Analysis Results" in markdown
+        assert "value" in markdown
+```
+
+## Running Tests
+- Run all tests: `pytest`
+- Run specific test file: `pytest tests/test_file.py`
+- Run with verbose output: `pytest -v`
+- Run with coverage: `pytest --cov=workflows` 

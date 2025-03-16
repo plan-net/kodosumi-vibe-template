@@ -1,6 +1,36 @@
 # CrewAI Flow Template with Ray and Kodosumi
 
+## Introduction
+
+Welcome to the CrewAI Flow Template with Ray and Kodosumi! This template provides a powerful foundation for building sophisticated AI agent workflows that can process data, generate insights, and deliver actionable recommendations.
+
+**What this template offers:**
+
+- **Ready-to-use CrewAI Framework**: Build complex multi-agent systems without starting from scratch
+- **Distributed Processing with Ray**: Scale your AI workflows across multiple cores or machines
+- **Web Interface with Kodosumi**: Deploy your AI workflows as web services with minimal configuration
+- **Comprehensive Testing Suite**: Ensure reliability with pre-configured test infrastructure
+- **Parallel Processing Capabilities**: Process multiple insights simultaneously for faster results
+- **Flexible Output Formats**: Generate results in both human-readable (Markdown) and machine-readable (JSON) formats
+- **Error Handling and Fallbacks**: Built-in mechanisms to gracefully handle failures
+- **Sample Datasets**: Pre-configured examples to help you get started quickly
+- **Cursor AI Agent Integration**: Enhanced development experience with specialized AI assistance through Cursor rules
+
+Whether you're building data analysis pipelines, customer feedback processing systems, or complex decision-making workflows, this template provides the infrastructure you need to focus on your specific use case rather than boilerplate code.
+
 This template provides a starting point for creating CrewAI flows that leverage Ray for distributed processing and Kodosumi for serving. It's designed to be simple yet functional, allowing you to quickly set up new CrewAI flows for different use cases.
+
+### Cursor AI Agent Integration
+
+This template includes specialized Cursor rules that enable AI-assisted development with domain-specific knowledge about CrewAI, Ray, and Kodosumi:
+
+- **Framework-Specific Guidance**: The AI assistant understands best practices for CrewAI flows, Ray distributed processing, and Kodosumi deployment
+- **Context-Aware Assistance**: Get relevant suggestions based on the file you're working on (crews, flows, HTML templates, etc.)
+- **Code Generation**: Generate boilerplate code for agents, tasks, Ray remote functions, and more
+- **Troubleshooting Help**: Get assistance with common issues in CrewAI, Ray, and Kodosumi integration
+- **Testing Guidance**: Receive suggestions for testing your flows in both local and Kodosumi environments
+
+The Cursor rules are organized by domain (crews, flow, frameworks, etc.) and automatically activate when you work on relevant files, making it easy to get the right assistance at the right time.
 
 ## Structure
 
@@ -478,33 +508,80 @@ This template includes configuration for the [Cursor](https://cursor.sh/) editor
   - Linting with Ruff and mypy
   - Custom snippets for Ray and CrewAI
 
-- `.cursor/rules/`: Directory containing rules for Cursor's AI assistant:
-  - `role_expertise.mdc`: Defines the AI assistant's role and expertise
-  - `output_formats.mdc`: Rules for handling output formats in CrewAI flows
-  - `deployment_workflow.mdc`: Workflow for developing and deploying CrewAI flows
-  - `framework_preferences.mdc`: Preferred frameworks and patterns
+- `.cursorrules/`: Directory containing rules for Cursor's AI assistant:
   - `crews.mdc`: Guidelines for implementing CrewAI crews
+  - `flow.mdc`: Best practices for CrewAI flow development
+  - `frameworks.mdc`: Preferred frameworks and patterns
+  - `general.mdc`: General development guidelines
   - `html.mdc`: Guidelines for HTML forms in Kodosumi
-  - `html_templates.mdc`: Specific guidelines for HTML templates
+  - `installation.mdc`: Setup and installation guidance
+  - `kodosumi.mdc`: Kodosumi-specific development rules
+  - `testing.mdc`: Testing strategies and patterns
 
 - `.cursorignore`: Specifies files and directories to be ignored by Cursor
+
+#### Working with Cursor AI Agent
+
+The Cursor AI Agent is designed to be your pair programming partner with specialized knowledge about CrewAI, Ray, and Kodosumi. Here's how to get the most out of it:
+
+1. **File-Specific Assistance**: The AI Agent automatically activates relevant rules based on the file you're working on:
+   - When editing crew files, it provides CrewAI agent and task guidance
+   - When working on flow files, it offers Ray integration patterns
+   - When modifying HTML templates, it suggests Kodosumi-specific form elements
+
+2. **Ask Domain-Specific Questions**: You can directly ask the AI Agent questions about:
+   - "How do I implement a CrewAI agent with web search capabilities?"
+   - "What's the best way to handle Ray task failures?"
+   - "How should I structure my Kodosumi form for this flow?"
+
+3. **Code Generation**: Request the AI Agent to generate boilerplate code:
+   - "Create a new CrewAI agent for data analysis"
+   - "Add a Ray remote function for parallel processing"
+   - "Generate a Kodosumi form for my flow parameters"
+
+4. **Troubleshooting**: When you encounter errors, share them with the AI Agent:
+   - "I'm getting this Ray error: [error message]"
+   - "My CrewAI flow isn't returning structured data"
+   - "Kodosumi deployment is failing with this error"
+
+The AI Agent combines general coding knowledge with the specialized domain knowledge from the Cursor rules to provide contextually relevant assistance throughout your development process.
 
 #### Cursor Rules Structure
 
 The template uses Cursor's rules system to provide context-specific guidance to the AI assistant:
 
-1. **Role and Expertise**: Defines the AI assistant's role as an expert in CrewAI, Ray, and Kodosumi.
-2. **Output Formats**: Provides guidelines for handling output formats in CrewAI flows.
-3. **Deployment Workflow**: Outlines the stages for local development, Kodosumi deployment, and production deployment.
-4. **Framework Preferences**: Lists preferred frameworks and patterns to follow or avoid.
-5. **Crews**: Provides guidelines for implementing CrewAI crews.
-6. **HTML**: Offers guidance for creating HTML forms in Kodosumi.
-7. **HTML Templates**: Provides specific guidelines for HTML templates.
+1. **Crews Rules**: Guidelines for implementing CrewAI crews, agents, and tasks
+   - Agent role definitions
+   - Task creation patterns
+   - Tool integration
+   - Agent-to-agent communication
+
+2. **Flow Rules**: Best practices for CrewAI flow development
+   - State management
+   - Error handling
+   - Parallel processing
+   - Result formatting
+
+3. **Frameworks Rules**: Preferred frameworks and patterns
+   - Ray for distributed processing
+   - CrewAI for agent-based workflows
+   - Kodosumi for serving and deployment
+
+4. **HTML Rules**: Guidelines for creating HTML forms in Kodosumi
+   - Form structure
+   - Input validation
+   - User experience considerations
+   - Responsive design
+
+5. **Testing Rules**: Testing strategies for CrewAI flows
+   - Unit testing crews and agents
+   - Integration testing flows
+   - Testing with Ray
+   - Testing Kodosumi deployment
 
 Each rule file includes:
 - A description of the rule
 - File patterns (globs) to which the rule applies
-- Whether the rule should always be applied
 - Detailed guidance in Markdown format
 
 #### Custom Snippets

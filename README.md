@@ -248,13 +248,12 @@ python -m workflows.crewai_flow.main output_format=markdown
 
 ```python
 from workflows.crewai_flow.main import kickoff
-import asyncio
 
-# Request JSON format
-result = asyncio.run(kickoff({"output_format": "json"}))
+# Run with JSON output format
+result = await kickoff({"output_format": "json"})
 
-# Request Markdown format
-result = asyncio.run(kickoff({"output_format": "markdown"}))
+# Run with Markdown output format
+result = await kickoff({"output_format": "markdown"})
 ```
 
 #### In API Requests
@@ -266,6 +265,43 @@ curl -X POST "http://localhost:8001/crewai_flow/" -d "output_format=json"
 # Request Markdown format
 curl -X POST "http://localhost:8001/crewai_flow/" -d "output_format=markdown"
 ```
+
+## Ray Configuration
+
+This template uses Ray for distributed processing and provides several environment variables to configure Ray's behavior. These can be set in your `.env` file:
+
+### Ray Task Configuration
+
+- `RAY_TASK_NUM_CPUS`: CPU resources allocated per Ray task (default: 0.1)
+- `RAY_TASK_MAX_RETRIES`: Maximum number of retries for Ray tasks (default: 3)
+- `RAY_TASK_TIMEOUT`: Timeout in seconds for Ray task execution (default: 10.0)
+- `RAY_BATCH_SIZE`: Number of insights to process in each batch (default: 1)
+
+### Ray Initialization Configuration
+
+- `RAY_INIT_NUM_CPUS`: Number of CPUs to allocate when initializing a new Ray instance (default: 2)
+- `RAY_DASHBOARD_PORT`: Port for Ray dashboard (use "None" to disable)
+
+### Example Configuration
+
+```bash
+# Ray configuration in .env file
+RAY_TASK_NUM_CPUS=0.2       # Allocate 0.2 CPUs per task
+RAY_TASK_MAX_RETRIES=5      # Retry failed tasks up to 5 times
+RAY_TASK_TIMEOUT=15.0       # Wait up to 15 seconds for task completion
+RAY_BATCH_SIZE=2            # Process insights in batches of 2
+RAY_INIT_NUM_CPUS=4         # Allocate 4 CPUs when initializing Ray
+RAY_DASHBOARD_PORT=8265     # Enable Ray dashboard on port 8265
+```
+
+### Troubleshooting Ray
+
+If you encounter issues with Ray tasks timing out:
+
+1. **Increase Timeout**: Set `RAY_TASK_TIMEOUT` to a higher value
+2. **Reduce Batch Size**: Set `RAY_BATCH_SIZE` to 1 to process one insight at a time
+3. **Restart Ray**: Stop and restart the Ray cluster with `ray stop` followed by `ray start --head`
+4. **Allocate More Resources**: Increase `RAY_INIT_NUM_CPUS` if your system has available resources
 
 ## Ray Integration and Scaling
 

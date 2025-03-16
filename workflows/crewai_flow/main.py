@@ -25,6 +25,14 @@ load_dotenv()
 # Kodosumi will handle Ray initialization for us
 is_kodosumi = os.environ.get("KODOSUMI_ENVIRONMENT") == "true"
 
+# Ray configuration from environment variables with defaults
+RAY_TASK_NUM_CPUS = float(os.environ.get("RAY_TASK_NUM_CPUS", "0.1"))
+RAY_TASK_MAX_RETRIES = int(os.environ.get("RAY_TASK_MAX_RETRIES", "3"))
+RAY_TASK_TIMEOUT = float(os.environ.get("RAY_TASK_TIMEOUT", "10.0"))
+RAY_BATCH_SIZE = int(os.environ.get("RAY_BATCH_SIZE", "1"))
+RAY_INIT_NUM_CPUS = int(os.environ.get("RAY_INIT_NUM_CPUS", "2"))
+RAY_DASHBOARD_PORT = os.environ.get("RAY_DASHBOARD_PORT", "None")  # Use "None" for no dashboard
+
 # Sample datasets for demonstration
 SAMPLE_DATASETS = {
     "sales_data": {
@@ -247,7 +255,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         # Process insights using Ray with improved error handling
         try:
             # Define a remote function to process each insight
-            @ray.remote(num_cpus=0.1, max_retries=3)  # Use minimal resources and allow retries
+            @ray.remote(num_cpus=RAY_TASK_NUM_CPUS, max_retries=RAY_TASK_MAX_RETRIES)  # Use configured resources and retries
             def process_insight(insight, index):
                 """Process a single insight using Ray."""
                 # Minimal processing time to reduce chance of timeouts
@@ -265,7 +273,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             # First try to process a single insight to test Ray functionality
             print("Testing Ray with a single insight...")
             try:
-                test_result = ray.get(process_insight.remote(insights[0], 0), timeout=10.0)
+                test_result = ray.get(process_insight.remote(insights[0], 0), timeout=RAY_TASK_TIMEOUT)
                 print(f"Ray test successful: {test_result}")
                 use_ray = True
             except (ray.exceptions.GetTimeoutError, TimeoutError) as timeout_err:
@@ -279,16 +287,16 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
                 print("Using Ray for parallel processing...")
                 processed_results = []
                 
-                # Process in very small batches (1 insight at a time) to minimize timeout issues
-                batch_size = 1
+                # Process in batches based on configuration
+                batch_size = RAY_BATCH_SIZE
                 for i in range(0, len(insights), batch_size):
                     batch = insights[i:i+batch_size]
                     process_tasks = [process_insight.remote(insight, i+j) for j, insight in enumerate(batch)]
                     
                     try:
-                        # Use a longer timeout for each batch (10 seconds instead of 3)
-                        print(f"Processing batch {i//batch_size + 1} with {len(batch)} insights (timeout: 10s)...")
-                        batch_results = ray.get(process_tasks, timeout=10.0)
+                        # Use configured timeout for each batch
+                        print(f"Processing batch {i//batch_size + 1} with {len(batch)} insights (timeout: {RAY_TASK_TIMEOUT}s)...")
+                        batch_results = ray.get(process_tasks, timeout=RAY_TASK_TIMEOUT)
                         processed_results.extend(batch_results)
                         print(f"Successfully processed batch {i//batch_size + 1}")
                     except (ray.exceptions.GetTimeoutError, TimeoutError) as timeout_err:
@@ -516,9 +524,10 @@ async def kickoff(inputs: dict = None):
                 ray.init(address="auto", ignore_reinit_error=True)
                 print("Connected to existing Ray cluster")
             except (ConnectionError, ValueError):
-                # If connecting fails, start a new Ray instance with minimal resources
-                ray.init(num_cpus=2, dashboard_port=None, ignore_reinit_error=True)
-                print("Started new Ray instance with minimal resources")
+                # If connecting fails, start a new Ray instance with configured resources
+                dashboard_port = None if RAY_DASHBOARD_PORT == "None" else int(RAY_DASHBOARD_PORT)
+                ray.init(num_cpus=RAY_INIT_NUM_CPUS, dashboard_port=dashboard_port, ignore_reinit_error=True)
+                print(f"Started new Ray instance with {RAY_INIT_NUM_CPUS} CPUs")
         except Exception as ray_init_error:
             print(f"Error initializing Ray: {ray_init_error}")
             print("Continuing without Ray parallelization")

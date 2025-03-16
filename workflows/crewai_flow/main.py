@@ -7,7 +7,7 @@ import ray
 import sys
 import time
 import random
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from crewai.flow import Flow, listen, start
 
 # Import your crew classes here
-from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew, FirstCrewOutput
+from workflows.crewai_flow.crews.first_crew.first_crew import FirstCrew
 
 # Load environment variables from .env file
 load_dotenv()

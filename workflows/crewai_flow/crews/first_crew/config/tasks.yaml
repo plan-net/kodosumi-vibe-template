@@ -13,7 +13,6 @@ analyze_data:
     
     Provide a detailed analysis of the patterns and trends you observe.
   expected_output: "A detailed analysis of the data with identified patterns and trends"
-  output_pydantic: "DataAnalysisOutput"
 
 generate_insights:
   name: "Generate Insights and Recommendations"
@@ -28,5 +27,4 @@ generate_insights:
     
     Format your response according to the requested output format.
   expected_output: "Business insights and actionable recommendations based on the data analysis"
-  output_pydantic: "BusinessInsightsOutput"
   context: ["analyze_data_task"] 

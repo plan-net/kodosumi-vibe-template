@@ -4,6 +4,7 @@ globs:
 alwaysApply: true
 ---
 ## Key Principle
+- make sure to be aware of everything in the [README.md](mdc:README.md)
 - follow test-driven development best-practices and work a lot with pytest
 - develop user requirements step-by-step by writing the test first and then implement the feature against it
 - write tests for single crews, the main flow and the serve application

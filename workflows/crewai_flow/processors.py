@@ -1,12 +1,12 @@
 """
 Processing utilities for the CrewAI flow.
-These functions handle error handling and local processing fallbacks.
+These functions handle parallel processing, error handling, and fallbacks.
 """
 
 import time
 import random
 import ray
-from typing import Dict, Any, List, Optional, Callable, TypeVar, Generic, Tuple, Union
+from typing import Dict, Any, List, TypeVar, Callable
 
 from workflows.crewai_flow.data import SAMPLE_DATASETS
 from workflows.crewai_flow.formatters import format_output
@@ -18,100 +18,6 @@ from workflows.crewai_flow.utils import (
 # Type variables for generic functions
 T = TypeVar('T')  # Input type
 R = TypeVar('R')  # Result type
-
-def process_insights_locally(insights: List[str]) -> List[Dict[str, Any]]:
-    """
-    Process insights locally without using Ray.
-    
-    Args:
-        insights: List of insights to process
-        
-    Returns:
-        List of processed insights with priority scores
-    """
-    print("Processing insights locally...")
-    processed_results = []
-    
-    for i, insight in enumerate(insights):
-        # Generate a priority score
-        priority = random.randint(1, 10)
-        
-        processed_results.append({
-            "insight": insight,
-            "priority": priority,
-            "processed_by": f"Local-{i}"
-        })
-    
-    return processed_results
-
-def create_fallback_response(dataset_name: str) -> Dict[str, Any]:
-    """
-    Create a fallback response when an error occurs during flow execution.
-    
-    Args:
-        dataset_name: The name of the dataset being analyzed
-        
-    Returns:
-        A dictionary containing fallback data
-    """
-    print("An error occurred during flow execution.")
-    
-    # Get dataset information
-    dataset = SAMPLE_DATASETS.get(dataset_name, {"name": "Unknown dataset"})
-    
-    # Set fallback data
-    analysis_results = {
-        "summary": f"Unable to analyze {dataset['name']} due to an error.",
-        "insights": ["Error occurred during analysis."],
-        "recommendations": ["Please try again later."]
-    }
-    
-    parallel_processing_results = [
-        {"insight": "Error occurred during analysis.", "priority": 10}
-    ]
-    
-    final_insights = {
-        "summary": analysis_results["summary"],
-        "prioritized_insights": parallel_processing_results,
-        "recommendations": analysis_results["recommendations"],
-        "dataset_analyzed": dataset_name,
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    return {
-        "analysis_results": analysis_results,
-        "parallel_processing_results": parallel_processing_results,
-        "final_insights": final_insights
-    }
-
-def handle_flow_error(flow_state: Any, output_format: str = "markdown") -> Any:
-    """
-    Handle errors that occur during flow execution.
-    
-    This function creates a fallback response when an error occurs during flow execution
-    and updates the flow state with the fallback data.
-    
-    Args:
-        flow_state: The flow state object to update
-        output_format: The desired output format ("markdown" or "json")
-        
-    Returns:
-        The formatted fallback response
-        
-    Note:
-        This function is designed to be called from a flow's error handler method.
-        It centralizes error handling logic outside the main flow class.
-    """
-    # Create fallback response
-    fallback_data = create_fallback_response(flow_state.dataset_name)
-    
-    # Update the flow state with fallback data
-    flow_state.analysis_results = fallback_data["analysis_results"]
-    flow_state.parallel_processing_results = fallback_data["parallel_processing_results"]
-    flow_state.final_insights = fallback_data["final_insights"]
-    
-    # Format the output based on the requested format
-    return format_output(flow_state.final_insights, output_format)
 
 def process_with_ray_or_locally(
     items: List[T],
@@ -206,28 +112,70 @@ def _process_locally(
     for i, item in enumerate(items):
         processed_results.append(process_func(item, i))
     
-    return processed_results
+    return processed_results 
 
-# Example of a processing function for insights
-def process_insight(insight: str, index: int) -> Dict[str, Any]:
+def create_fallback_response(dataset_name: str) -> Dict[str, Any]:
     """
-    Process a single insight, generating a priority score.
-    
-    This is an example processing function that can be used with
-    process_with_ray_or_locally.
+    Create a fallback response when an error occurs during flow execution.
     
     Args:
-        insight: The insight text to process
-        index: The index of the insight in the original list
+        dataset_name: The name of the dataset being analyzed
         
     Returns:
-        A dictionary with the processed insight data
+        A dictionary containing fallback data
     """
-    # Generate a priority score
-    priority = random.randint(1, 10)
+    print("An error occurred during flow execution.")
+    
+    # Get dataset information
+    dataset = SAMPLE_DATASETS.get(dataset_name, {"name": "Unknown dataset"})
+    
+    # Set fallback data
+    analysis_results = {
+        "summary": f"Unable to analyze {dataset['name']} due to an error.",
+        "insights": ["Error occurred during analysis."],
+        "recommendations": ["Please try again later."]
+    }
+    
+    parallel_processing_results = [
+        {"insight": "Error occurred during analysis.", "priority": 10}
+    ]
+    
+    final_insights = {
+        "summary": analysis_results["summary"],
+        "prioritized_insights": parallel_processing_results,
+        "recommendations": analysis_results["recommendations"],
+        "dataset_analyzed": dataset_name,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
     
     return {
-        "insight": insight,
-        "priority": priority,
-        "processed_by": f"Worker-{index}"
-    } 
+        "analysis_results": analysis_results,
+        "parallel_processing_results": parallel_processing_results,
+        "final_insights": final_insights
+    }
+
+def handle_flow_error(flow_state: Any, output_format: str = "markdown") -> Any:
+    """
+    Handle errors that occur during flow execution.
+    
+    This function creates a fallback response when an error occurs during flow execution
+    and updates the flow state with the fallback data.
+    
+    Args:
+        flow_state: The flow state object to update
+        output_format: The desired output format ("markdown" or "json")
+        
+    Returns:
+        The formatted fallback response
+    """
+    # Create fallback response
+    fallback_data = create_fallback_response(flow_state.dataset_name)
+    
+    # Update the flow state with fallback data
+    flow_state.analysis_results = fallback_data["analysis_results"]
+    flow_state.parallel_processing_results = fallback_data["parallel_processing_results"]
+    flow_state.final_insights = fallback_data["final_insights"]
+    
+    # Format the output based on the requested format
+    return format_output(flow_state.final_insights, output_format)
+

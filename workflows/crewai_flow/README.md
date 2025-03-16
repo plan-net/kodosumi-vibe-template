@@ -1,156 +1,79 @@
-# CrewAI Data Analysis Flow
+# CrewAI Flow Template
 
-This workflow demonstrates how to use CrewAI with Ray for distributed data analysis. It showcases a complete flow that analyzes data, processes insights in parallel, and returns formatted results.
+This template provides a structured approach to building CrewAI flows with parallel processing capabilities.
 
-## Features
+## Code Organization
 
-- **AI-Powered Data Analysis**: Uses CrewAI agents to analyze datasets and generate insights
-- **Parallel Processing**: Leverages Ray for distributed computing and parallel insight processing
-- **Flexible Output Formats**: Supports both Markdown (human-readable) and JSON (agent-to-agent) output formats
-- **Web Interface**: Provides a user-friendly web interface for selecting datasets and output formats
+The codebase is organized into the following components:
+
+### Main Flow (`main.py`)
+
+The main flow class that orchestrates the entire process:
+- `CrewAIFlowState`: Holds the state of the flow
+- `CrewAIFlow`: Defines the flow steps and logic
+  - `validate_inputs`: Validates input parameters
+  - `analyze_data`: Uses CrewAI to analyze data
+  - `process_insights_in_parallel`: Processes insights using Ray or locally
+  - `process_insight`: Processes a single insight (kept in main.py for visibility)
+  - `finalize_results`: Aggregates results and formats output
+
+### Data Management (`data.py`)
+
+Contains sample datasets and data structures:
+- `SAMPLE_DATASETS`: Dictionary of sample datasets for testing
+
+### Utility Functions (`utils.py`)
+
+Ray-related utility functions:
+- Environment variable configurations
+- `apply_ray_patch`: Fixes Ray's FilteredStream isatty error
+- `initialize_ray`: Handles Ray initialization with fallbacks
+- `shutdown_ray`: Safely shuts down Ray
+- `test_ray_connectivity`: Tests if Ray is working properly
+
+### Processing Utilities (`processors.py`)
+
+Functions for parallel processing and error handling:
+- `create_fallback_response`: Creates a response when errors occur
+- `handle_flow_error`: Centralizes error handling logic
+- `process_with_ray_or_locally`: Generic function for parallel processing that automatically falls back to local processing when Ray is unavailable
+
+### Output Formatting (`formatters.py`)
+
+Functions for formatting and extracting data:
+- `format_output`: Formats output in markdown or JSON
+- `extract_structured_data`: Extracts structured data from crew results
+
+### Crew Definitions (`crews/`)
+
+Contains crew definitions used in the flow:
+- `first_crew/`: Example crew with agents and tasks
+
+## Design Decisions
+
+1. **Process Insight Function**: Kept in `main.py` for better visibility and tracking, as it's a core part of the flow logic.
+
+2. **Ray Utilities**: Moved to a separate file to keep the main flow clean and focused on business logic.
+
+3. **Generic Processing**: Implemented a generic `process_with_ray_or_locally` function that can be used with any processing function and automatically falls back to local processing when Ray is unavailable.
+
+4. **Error Handling**: Centralized error handling in utility functions to reduce code duplication.
+
+5. **Simplified Fallback Mechanism**: Removed specialized fallback functions in favor of the generic processing function that handles both Ray and local processing.
 
 ## Usage
 
-### Web Interface
-
-1. Select a dataset from the dropdown menu
-2. Choose an output format:
-   - **Markdown**: Human-readable format with headers, lists, and formatting (default)
-   - **JSON**: Machine-readable format for agent-to-agent interactions
-3. Click "Run Analysis" to start the flow
-
-### Programmatic Usage
-
-```python
-from workflows.crewai_flow.main import kickoff
-import asyncio
-
-# Run with default parameters (sales_data dataset, markdown output)
-result = asyncio.run(kickoff({}))
-
-# Run with custom parameters
-result = asyncio.run(kickoff({
-    "dataset_name": "customer_feedback",
-    "output_format": "json"
-}))
-```
-
-## Output Formats
-
-### Markdown Format
-
-The Markdown format is designed for human readability and includes:
-
-- Formatted headers for sections
-- Bulleted lists for insights and recommendations
-- Emphasis on important information
-- Timestamp and dataset information
-
-Example:
-```markdown
-# Analysis Results for Quarterly Sales Data
-
-*Analysis completed at: 2023-06-15 14:30:45*
-
-## Summary
-
-The quarterly sales data shows a consistent growth trend across all regions...
-
-## Key Insights (Prioritized)
-
-1. **Electronics sales in the West region showed the highest growth in Q4** *(Priority: 9)*
-2. **North region consistently outperforms other regions** *(Priority: 8)*
-3. **Furniture sales are declining in all regions except South** *(Priority: 7)*
-
-## Recommendations
-
-1. Increase marketing budget for Electronics in the West region
-2. Investigate reasons for furniture sales decline
-3. Replicate North region strategies in other regions
-```
-
-### JSON Format
-
-The JSON format is designed for machine readability and agent-to-agent interactions:
-
-```json
-{
-  "summary": "The quarterly sales data shows a consistent growth trend across all regions...",
-  "prioritized_insights": [
-    {
-      "insight": "Electronics sales in the West region showed the highest growth in Q4",
-      "priority": 9,
-      "processed_by": "Worker-2",
-      "timestamp": "2023-06-15 14:30:40"
-    },
-    ...
-  ],
-  "recommendations": [
-    "Increase marketing budget for Electronics in the West region",
-    "Investigate reasons for furniture sales decline",
-    "Replicate North region strategies in other regions"
-  ],
-  "dataset_analyzed": "sales_data",
-  "timestamp": "2023-06-15 14:30:45"
-}
-```
-
-## Integration with Kodosumi
-
-This workflow is designed to work seamlessly with Kodosumi. When running in the Kodosumi environment:
-
-- Ray initialization is handled automatically
-- The web interface is accessible through the Kodosumi UI
-- Results are displayed in the Kodosumi output panel
-
-By default, the workflow uses the Markdown output format when running in Kodosumi, as this provides the best user experience in the Kodosumi interface.
-
-## For AI Agents
-
-If you are an AI agent interacting with this workflow programmatically, follow these guidelines:
-
-### Output Format Selection
-
-Always specify `output_format="json"` when calling this workflow to receive structured data that is easier to parse and process:
-
-```python
-# Example for AI agent integration
-from workflows.crewai_flow.main import kickoff
-import asyncio
-import json
-
-# Request JSON format for agent-to-agent interaction
-result = asyncio.run(kickoff({
-    "dataset_name": "sales_data",
-    "output_format": "json"
-}))
-
-# Process the structured data
-summary = result["summary"]
-insights = [insight["insight"] for insight in result["prioritized_insights"]]
-recommendations = result["recommendations"]
-
-# Take action based on the insights
-for insight in insights:
-    if "high priority" in insight.lower():
-        # Process high priority insights
-        pass
-```
-
-### API Integration
-
-When making HTTP requests to the workflow's API endpoint:
+To run the flow:
 
 ```bash
-# Example curl request for AI agent integration
-curl -X POST "http://localhost:8000/" \
-  -d "dataset_name=sales_data&output_format=json"
+python -m workflows.crewai_flow.main
 ```
 
-### Error Handling
+## Customization
 
-The workflow will validate all inputs and use defaults if invalid values are provided:
-- Invalid dataset_name → defaults to "sales_data"
-- Invalid output_format → defaults to "markdown"
+To customize the flow:
 
-Always check the response structure to ensure you received the expected format. 
+1. Modify the `CrewAIFlowState` class to include your own state variables
+2. Add or modify flow steps in the `CrewAIFlow` class
+3. Create your own crew definitions in the `crews/` directory
+4. Update the `process_insight` function to implement your own logic 

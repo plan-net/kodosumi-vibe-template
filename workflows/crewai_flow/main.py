@@ -23,8 +23,8 @@ from workflows.crewai_flow.utils import (
 )
 from workflows.crewai_flow.formatters import format_output, extract_structured_data
 from workflows.crewai_flow.processors import (
-    process_insights_locally, create_fallback_response, handle_flow_error,
-    process_with_ray_or_locally, process_insight
+    create_fallback_response, handle_flow_error,
+    process_with_ray_or_locally
 )
 
 # Load environment variables from .env file
@@ -131,15 +131,22 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         
         try:
             # Process insights using the generalized function
+            # This will automatically use Ray if available, or fall back to local processing
             self.state.parallel_processing_results = process_with_ray_or_locally(
                 items=insights,
-                process_func=process_insight,
+                process_func=self.process_insight,
                 batch_size=RAY_BATCH_SIZE
             )
         except Exception as e:
-            # Fallback to local processing if any error occurs
-            print(f"Processing failed: {e}. Falling back to local processing.")
-            self.state.parallel_processing_results = process_insights_locally(insights)
+            # If the generic processing function fails completely, create a minimal result
+            print(f"Processing failed completely: {e}. Creating minimal results.")
+            self.state.parallel_processing_results = [
+                {
+                    "insight": "Error processing insights.",
+                    "priority": 10,
+                    "processed_by": "Error-Handler"
+                }
+            ]
         
         # Sort results by priority (highest first)
         self.state.parallel_processing_results = sorted(
@@ -149,6 +156,31 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         )
         
         print(f"Processed {len(self.state.parallel_processing_results)} insights.")
+
+    def process_insight(self, insight: str, index: int) -> Dict[str, Any]:
+        """
+        Process a single insight, generating a priority score.
+        
+        This function is used with process_with_ray_or_locally to process
+        insights either locally or with Ray, depending on availability.
+        
+        Args:
+            insight: The insight text to process
+            index: The index of the insight in the original list
+            
+        Returns:
+            A dictionary with the processed insight data
+        """
+        # Generate a priority score based on the insight content
+        # In a real application, this could use NLP or other techniques
+        # to determine the importance of the insight
+        priority = random.randint(1, 10)
+        
+        return {
+            "insight": insight,
+            "priority": priority,
+            "processed_by": f"Worker-{index}"
+        }
 
     @listen(process_insights_in_parallel)
     def finalize_results(self):

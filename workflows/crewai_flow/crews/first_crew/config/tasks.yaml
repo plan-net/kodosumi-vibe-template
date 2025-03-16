@@ -21,8 +21,6 @@ generate_insights:
   description: |
     Based on the data analysis provided, generate business insights and actionable recommendations.
     
-    Analysis: {analysis_task.output}
-    
     Provide:
     1. A summary of the analysis
     2. Key business insights
@@ -31,4 +29,4 @@ generate_insights:
     Format your response according to the requested output format.
   expected_output: "Business insights and actionable recommendations based on the data analysis"
   output_pydantic: "BusinessInsightsOutput"
-  context: ["analyze_data"] 
+  context: ["analyze_data_task"] 

@@ -1,9 +1,9 @@
 ---
-description: Setting up Crews with CrewAI as part of the flow. 
-globs: workflows/crews/*
+description: Developing Single Crews as part of a CrewAI flow
+globs: 
 alwaysApply: false
 ---
-# Setting up Crew with CrewAI
+# Developing a single crew for a crewai flow
 
 ## Recommended Patters for Crews
 - keep it simple if possible and don't create to complex Crews

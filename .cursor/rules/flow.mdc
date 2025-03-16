@@ -16,6 +16,7 @@ alwaysApply: false
 ### CrewAI Related
 - Implement CrewAI crews for complex AI agent tasks
 - Always include output_format parameter in CrewAI flows with markdown as default
+- make sure to consider the rules for single Crews defined in crews.mdc
 
 ### Flow Related
 - make sure to track in the global flow state the desired output format for the flow

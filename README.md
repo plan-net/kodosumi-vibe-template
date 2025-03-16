@@ -1,686 +1,128 @@
-# CrewAI Flow Template with Ray and Kodosumi
+# CrewAI Flow Template
 
-## Introduction
+A template for building AI workflows with CrewAI and Kodosumi.
 
-Welcome to the CrewAI Flow Template with Ray and Kodosumi! This template provides a powerful foundation for building sophisticated AI agent workflows that can process data, generate insights, and deliver actionable recommendations.
+## Quick Start
 
-**What this template offers:**
+1. **Clone the Repository**
+   ```bash
+   git clone https://github.com/kodosumi/crewai-flow-template.git
+   cd crewai-flow-template
+   ```
 
-- **Ready-to-use CrewAI Framework**: Build complex multi-agent systems without starting from scratch
-- **Distributed Processing with Ray**: Scale your AI workflows across multiple cores or machines
-- **Web Interface with Kodosumi**: Deploy your AI workflows as web services with minimal configuration
-- **Comprehensive Testing Suite**: Ensure reliability with pre-configured test infrastructure
-- **Parallel Processing Capabilities**: Process multiple insights simultaneously for faster results
-- **Flexible Output Formats**: Generate results in both human-readable (Markdown) and machine-readable (JSON) formats
-- **Error Handling and Fallbacks**: Built-in mechanisms to gracefully handle failures
-- **Sample Datasets**: Pre-configured examples to help you get started quickly
-- **Cursor AI Agent Integration**: Enhanced development experience with specialized AI assistance through Cursor rules
+2. **Install Dependencies**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   ```
 
-Whether you're building data analysis pipelines, customer feedback processing systems, or complex decision-making workflows, this template provides the infrastructure you need to focus on your specific use case rather than boilerplate code.
+3. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your settings
+   ```
 
-This template provides a starting point for creating CrewAI flows that leverage Ray for distributed processing and Kodosumi for serving. It's designed to be simple yet functional, allowing you to quickly set up new CrewAI flows for different use cases.
+4. **Run Locally**
+   ```bash
+   python -m kodosumi.cli serve
+   ```
 
-### Cursor AI Agent Integration
+## Features
 
-This template includes specialized Cursor rules that enable AI-assisted development with domain-specific knowledge about CrewAI, Ray, and Kodosumi:
+- 🤖 AI-powered workflows with CrewAI
+- 🚀 Easy deployment with Kodosumi
+- 📊 Web interface for workflow management
+- 🔧 Extensible and customizable
 
-- **Framework-Specific Guidance**: The AI assistant understands best practices for CrewAI flows, Ray distributed processing, and Kodosumi deployment
-- **Context-Aware Assistance**: Get relevant suggestions based on the file you're working on (crews, flows, HTML templates, etc.)
-- **Code Generation**: Generate boilerplate code for agents, tasks, Ray remote functions, and more
-- **Troubleshooting Help**: Get assistance with common issues in CrewAI, Ray, and Kodosumi integration
-- **Testing Guidance**: Receive suggestions for testing your flows in both local and Kodosumi environments
+## Development with Cursor
 
-The Cursor rules are organized by domain (crews, flow, frameworks, etc.) and automatically activate when you work on relevant files, making it easy to get the right assistance at the right time.
+This template includes specialized Cursor rules that provide AI-assisted development:
 
-## Structure
+### Available Rules
+
+- **Crews**: Guidelines for developing individual CrewAI crews
+- **Flow**: Best practices for implementing CrewAI flows
+- **Frameworks**: Preferred frameworks and their usage
+- **HTML**: Standards for creating web interfaces
+- **Installation**: Environment setup and dependency management
+- **Kodosumi**: Integration with Kodosumi services
+- **Testing**: Test-driven development practices
+
+### Using Cursor Rules
+
+1. Open the project in Cursor
+2. Access context-aware assistance based on file type
+3. Get AI suggestions for:
+   - Creating agents and tasks
+   - Implementing flows
+   - Writing tests
+   - Debugging issues
+   - Deploying services
+
+### Key Benefits
+
+- Test-driven development guidance
+- Framework-specific best practices
+- Error handling patterns
+- Resource management tips
+- Integration examples
+
+## Documentation
+
+### Getting Started
+- [Installation Guide](docs/installation.md)
+- [Deployment Guide](docs/deployment.md)
+
+### Development
+- [Development Guide](docs/development/guide.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
+
+### Reference
+- [CrewAI Flow Components](docs/reference/crewai_flow.md)
+- [Common Utilities](docs/reference/common_utilities.md)
+
+## Project Structure
 
 ```
-template/
-├── pyproject.toml            # Project configuration and dependencies
-├── config.yaml               # Kodosumi configuration file
-├── requirements.txt          # Legacy Python dependencies (for compatibility)
-├── .env.example              # Example environment variables
-├── .cursor.json              # Cursor editor configuration
-├── .cursorrules              # Cursor AI assistant configuration
-├── .cursorignore             # Files to ignore in Cursor
-├── install.sh                # Installation script for Linux/macOS
-├── install.bat               # Installation script for Windows
-├── tests/                    # Test directory
-│   ├── __init__.py
-│   └── test_basic.py
-└── workflows/
-    └── crewai_flow/
-        ├── crews/
-        │   └── first_crew/
-        │       ├── __init__.py
-        │       └── first_crew.py
-        ├── templates/
-        │   ├── _base.html
-        │   └── form.html
-        ├── tools/
-        │   ├── __init__.py
-        │   └── example_tool.py
-        ├── __init__.py
-        ├── main.py
-        └── serve.py
+workflows/
+├── common/              # Shared utilities
+├── crewai_flow/        # Example CrewAI flow
+│   ├── agents/         # Agent definitions
+│   ├── crews/          # Crew definitions
+│   ├── tasks/          # Task definitions
+│   ├── tools/          # Tool definitions
+│   ├── templates/      # Web interface
+│   ├── main.py         # Flow implementation
+│   └── serve.py        # Kodosumi service
+└── another_flow/       # Your custom flow
 ```
 
-## Components
+## Creating a Workflow
 
-- **pyproject.toml**: Modern Python project configuration with dependencies, build settings, and development tools.
-- **config.yaml**: Kodosumi configuration file for deploying the flow.
-- **main.py**: The main flow definition using CrewAI's Flow class with Ray integration for distributed processing.
-- **serve.py**: A FastAPI-based web service for the flow, using Ray Serve for deployment.
-- **crews/**: Directory containing crew definitions.
-- **templates/**: HTML templates for the web interface.
-- **tools/**: Directory for custom tools used by the crews.
-- **tests/**: Directory containing tests for the project.
-- **.cursor.json**: Configuration for the Cursor editor with custom snippets and settings.
-- **.cursorrules**: Configuration for the Cursor AI assistant with rules and guidelines.
-- **.cursorignore**: Specifies files and directories to be ignored by Cursor.
-- **install.sh**: Installation script for Linux/macOS.
-- **install.bat**: Installation script for Windows.
+1. Create a new directory in `workflows/`
+2. Define your flow state and steps in `main.py`
+3. Create a Kodosumi service in `serve.py`
+4. Add your workflow to `config.yaml`
 
-## How to Use
+See the [Development Guide](docs/development/guide.md) for detailed instructions.
 
-1. **Clone the Template**: Copy the template directory to create a new project.
-2. **Configure Project**: Update the `pyproject.toml` file with your project details and dependencies.
-3. **Configure Kodosumi**: Update the `config.yaml` file with your API keys and other settings.
-4. **Rename Components**: Rename the `crewai_flow` directory and update imports accordingly.
-5. **Define Your Flow**: Modify `main.py` to define your flow steps and state.
-6. **Create Crews**: Add your crew definitions in the `crews/` directory.
-7. **Update the Web Interface**: Modify the HTML templates and `serve.py` to match your flow's parameters.
+## Deployment
 
-## Installation
+1. Configure your workflow in `config.yaml`
+2. Start Kodosumi services:
+   ```bash
+   python -m kodosumi.cli spool
+   serve deploy config.yaml
+   python -m kodosumi.cli serve
+   ```
 
-### Important Note About Kodosumi
+See the [Deployment Guide](docs/deployment.md) for more details.
 
-**Kodosumi is not available on PyPI** and must be installed directly from GitHub:
+## Contributing
 
-```bash
-pip install git+https://github.com/masumi-network/kodosumi.git@dev
-```
-
-The installation scripts handle this automatically, but if you're installing manually, you'll need to run this command separately.
-
-### Using Installation Scripts (Recommended)
-
-#### Linux/macOS
-
-```bash
-# Make the script executable
-chmod +x install.sh
-
-# Run the installation script
-./install.sh
-```
-
-#### Windows
-
-```bash
-# Run the installation script
-install.bat
-```
-
-These scripts will:
-1. Create a virtual environment
-2. Install the project in development mode
-3. Install development dependencies
-4. Install Kodosumi from GitHub (dev branch)
-5. Create a .env file from .env.example if it doesn't exist
-
-### Using pip (Manual)
-
-```bash
-# Install the package in development mode
-pip install -e .
-
-# Install development dependencies
-pip install -e ".[dev]"
-
-# Install Kodosumi from GitHub (dev branch)
-pip install git+https://github.com/masumi-network/kodosumi.git@dev
-```
-
-### Using requirements.txt (Legacy)
-
-```bash
-pip install -r requirements.txt
-```
-
-### Manual Kodosumi Installation
-
-If you need more control over the Kodosumi installation:
-
-```bash
-# Clone the Kodosumi repository
-git clone https://github.com/masumi-network/kodosumi.git
-
-# Change to the Kodosumi directory
-cd kodosumi
-
-# Checkout the dev branch
-git checkout dev
-
-# Install in development mode
-pip install -e .
-
-# Return to your project directory
-cd ..
-```
-
-## Running the Flow
-
-### Local Execution
-
-To run the flow locally:
-
-```bash
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
-
-# Start a local Ray cluster (if not already running)
-ray start --head
-
-# Run with default parameters
-python -m workflows.crewai_flow.main
-
-# Run with custom parameters
-python -m workflows.crewai_flow.main dataset_name=customer_feedback output_format=json
-```
-
-When running locally, the flow will:
-1. Connect to the local Ray cluster or initialize a new one if needed
-2. Execute the flow with the provided parameters
-3. Shut down Ray when finished (if it was initialized by the flow)
-
-### Kodosumi Deployment
-
-To deploy the flow with Kodosumi, follow these steps:
-
-```bash
-# 1. Ensure Kodosumi is installed from GitHub
-pip install git+https://github.com/masumi-network/kodosumi.git@dev
-
-# 2. Start a local Ray cluster (if not already running)
-ray start --head
-
-# 3. Start Kodosumi spooler
-python -m kodosumi.cli spool
-
-# 4. Update config.yaml with your workflow configuration
-# See the example config.yaml in this repository
-
-# 5. Deploy with Ray Serve
-serve deploy ./config.yaml
-
-# 6. Start Kodosumi services
-python -m kodosumi.cli serve
-
-# 7. Access the service at http://localhost:3370
-```
-
-When deployed with Kodosumi:
-1. Ray is used for distributed processing
-2. The Kodosumi spooler handles background tasks
-3. The flow is accessible via the configured route prefix (e.g., `/crewai_flow`)
-4. The web interface allows users to input parameters and execute the flow
-
-## Output Format Options
-
-This template supports two output formats for all flows:
-
-### Markdown Format (Default)
-
-The Markdown format is designed for human readability and includes:
-- Formatted headers for sections
-- Bulleted lists for insights and recommendations
-- Emphasis on important information
-- Timestamp and metadata
-
-This format is ideal for:
-- Displaying results in the Kodosumi UI
-- Generating reports for human consumption
-- Documentation and sharing results
-
-### JSON Format
-
-The JSON format is designed for machine readability and agent-to-agent interactions:
-- Structured data in a standard format
-- Easy to parse and process programmatically
-- Contains all the same information as the Markdown format
-
-This format is ideal for:
-- AI agent-to-agent interactions
-- Programmatic processing of results
-- Integration with other systems and APIs
-
-### Specifying the Output Format
-
-You can specify the output format in several ways:
-
-#### In the Web Interface
-
-Select the output format from the dropdown menu in the web interface.
-
-#### In Local Execution
-
-```bash
-# Run with JSON output format
-python -m workflows.crewai_flow.main output_format=json
-
-# Run with Markdown output format (default)
-python -m workflows.crewai_flow.main output_format=markdown
-```
-
-#### In Programmatic Usage
-
-```python
-from workflows.crewai_flow.main import kickoff
-
-# Run with JSON output format
-result = await kickoff({"output_format": "json"})
-
-# Run with Markdown output format
-result = await kickoff({"output_format": "markdown"})
-```
-
-#### In API Requests
-
-```bash
-# Request JSON format
-curl -X POST "http://localhost:8001/crewai_flow/" -d "output_format=json"
-
-# Request Markdown format
-curl -X POST "http://localhost:8001/crewai_flow/" -d "output_format=markdown"
-```
-
-## Ray Configuration
-
-This template uses Ray for distributed processing and provides several environment variables to configure Ray's behavior. These can be set in your `.env` file:
-
-### Ray Task Configuration
-
-- `RAY_TASK_NUM_CPUS`: CPU resources allocated per Ray task (default: 0.1)
-- `RAY_TASK_MAX_RETRIES`: Maximum number of retries for Ray tasks (default: 3)
-- `RAY_TASK_TIMEOUT`: Timeout in seconds for Ray task execution (default: 10.0)
-- `RAY_BATCH_SIZE`: Number of insights to process in each batch (default: 1)
-
-### Ray Initialization Configuration
-
-- `RAY_INIT_NUM_CPUS`: Number of CPUs to allocate when initializing a new Ray instance (default: 2)
-- `RAY_DASHBOARD_PORT`: Port for Ray dashboard (use "None" to disable)
-
-### Example Configuration
-
-```bash
-# Ray configuration in .env file
-RAY_TASK_NUM_CPUS=0.2       # Allocate 0.2 CPUs per task
-RAY_TASK_MAX_RETRIES=5      # Retry failed tasks up to 5 times
-RAY_TASK_TIMEOUT=15.0       # Wait up to 15 seconds for task completion
-RAY_BATCH_SIZE=2            # Process insights in batches of 2
-RAY_INIT_NUM_CPUS=4         # Allocate 4 CPUs when initializing Ray
-RAY_DASHBOARD_PORT=8265     # Enable Ray dashboard on port 8265
-```
-
-### Troubleshooting Ray
-
-If you encounter issues with Ray tasks timing out:
-
-1. **Increase Timeout**: Set `RAY_TASK_TIMEOUT` to a higher value
-2. **Reduce Batch Size**: Set `RAY_BATCH_SIZE` to 1 to process one insight at a time
-3. **Restart Ray**: Stop and restart the Ray cluster with `ray stop` followed by `ray start --head`
-4. **Allocate More Resources**: Increase `RAY_INIT_NUM_CPUS` if your system has available resources
-
-## Ray Integration and Scaling
-
-This template demonstrates several patterns for distributed processing with Ray:
-
-### 1. Remote Execution of CrewAI Crews
-
-```python
-# Run a CrewAI crew on a Ray worker
-result_ref = ray.remote(FirstCrew().crew().kickoff).remote(
-    inputs={"param1": "value1", "param2": "value2"}
-)
-result = ray.get(result_ref)
-```
-
-### 2. Parallel Processing of Multiple Items
-
-```python
-# Define a remote function
-@ray.remote
-def process_item(item):
-    # Process the item
-    return {"processed_item": item, "status": "processed"}
-
-# Process multiple items in parallel
-items = ["item1", "item2", "item3", "item4", "item5"]
-process_tasks = [process_item.remote(item) for item in items]
-processed_results = ray.get(process_tasks)
-```
-
-### 3. Resource-Specific Tasks
-
-```python
-# Request specific resources for a task
-@ray.remote(num_cpus=1)
-def complex_processing_task(data, config):
-    # Perform complex processing
-    return {"result": f"Processed {data} with {config}"}
-```
-
-### 4. Task Dependencies and Aggregation
-
-```python
-# Create processing tasks
-processing_refs = [complex_processing_task.remote(data, config) 
-                  for data, config in zip(data_items, configs)]
-
-# Wait for processing tasks to complete
-processing_results = ray.get(processing_refs)
-
-# Create an aggregation task that depends on the processing results
-aggregation_ref = aggregation_task.remote(processing_results)
-aggregation_result = ray.get(aggregation_ref)
-```
-
-### Scaling Considerations
-
-- **Worker Resources**: Use the `num_cpus`, `num_gpus`, and `resources` parameters to specify resource requirements for tasks.
-- **Task Dependencies**: Create complex workflows by passing references between tasks.
-- **Cluster Configuration**: Configure your Ray cluster based on your workload requirements.
-- **Monitoring**: Use the Ray dashboard to monitor task execution and resource utilization.
-
-## Kodosumi Configuration
-
-The `config.yaml` file contains the configuration for Kodosumi:
-
-```yaml
-# Example config.yaml for Kodosumi deployment
-
-proxy_location: EveryNode
-http_options:
-  host: 127.0.0.1
-  port: 8001
-grpc_options:
-  port: 9001
-  grpc_servicer_functions: []
-logging_config:
-  encoding: TEXT
-  log_level: DEBUG
-  logs_dir: null
-  enable_access_log: true
-applications:
-- name: crewai_flow
-  route_prefix: /crewai_flow
-  import_path: workflows.crewai_flow.serve:fast_app
-  runtime_env:
-    env_vars:
-      PYTHONPATH: .
-      OPENAI_API_KEY: your_openai_api_key_here
-      EXA_API_KEY: your_exa_api_key_here
-      OTEL_SDK_DISABLED: "true"
-    pip:
-    - crewai==0.86.*
-    - crewai_tools==0.17.*
-```
-
-### Configuration Options
-
-- **proxy_location**: Specifies where the proxy should run (usually `EveryNode`).
-- **http_options**: HTTP server configuration.
-  - **host**: The host to bind to (usually `127.0.0.1` for local development).
-  - **port**: The port to bind to (default is `8001`).
-- **grpc_options**: gRPC server configuration.
-  - **port**: The port for gRPC (default is `9001`).
-- **logging_config**: Logging configuration.
-  - **encoding**: Log encoding format (usually `TEXT`).
-  - **log_level**: Log level (e.g., `DEBUG`, `INFO`).
-  - **enable_access_log**: Whether to enable access logs.
-- **applications**: List of applications to deploy.
-  - **name**: Application name (used for identification).
-  - **route_prefix**: URL prefix for the application (e.g., `/crewai_flow`).
-  - **import_path**: Python import path to the application (must end with `:fast_app`).
-  - **runtime_env**: Environment configuration for the application.
-    - **env_vars**: Environment variables to set.
-      - **PYTHONPATH**: Path to add to Python's module search path.
-      - **OPENAI_API_KEY**: Your OpenAI API key.
-      - **EXA_API_KEY**: Your Exa.ai API key (if using web search).
-      - **OTEL_SDK_DISABLED**: Disable OpenTelemetry SDK (usually set to `"true"`).
-    - **pip**: Additional pip packages to install in the runtime environment.
-
-### Multiple Applications
-
-You can deploy multiple applications in the same config.yaml file:
-
-```yaml
-applications:
-- name: crewai_flow
-  route_prefix: /crewai_flow
-  import_path: workflows.crewai_flow.serve:fast_app
-  runtime_env:
-    # ... configuration for crewai_flow ...
-
-- name: another_flow
-  route_prefix: /another_flow
-  import_path: workflows.another_flow.serve:fast_app
-  runtime_env:
-    # ... configuration for another_flow ...
-```
-
-Each application will be accessible at its own route prefix.
-
-## Example
-
-The template includes a comprehensive example with multiple steps:
-
-1. **Step 1**: Executes a CrewAI crew task using Ray remote execution.
-2. **Step 2**: Demonstrates parallel processing of multiple items using Ray.
-3. **Step 3**: Shows advanced parallel processing patterns, including:
-   - Resource-specific tasks
-   - Task dependencies
-   - Result aggregation
-4. **Step 4**: Aggregates results from previous steps and executes a final CrewAI crew task.
-
-## Requirements
-
-- Python 3.12.2 (exactly)
-- CrewAI 0.105.0
-- Ray 2.6.0+
-- FastAPI
-- Kodosumi
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ## License
 
-[Your License]
-
-## Development Tools
-
-### Cursor Editor Integration
-
-This template includes configuration for the [Cursor](https://cursor.sh/) editor, which provides AI-powered coding assistance:
-
-- `.cursor.json`: Configuration file for Cursor with:
-  - Code formatting with Black and isort
-  - Linting with Ruff and mypy
-  - Custom snippets for Ray and CrewAI
-
-- `.cursorrules/`: Directory containing rules for Cursor's AI assistant:
-  - `crews.mdc`: Guidelines for implementing CrewAI crews
-  - `flow.mdc`: Best practices for CrewAI flow development
-  - `frameworks.mdc`: Preferred frameworks and patterns
-  - `general.mdc`: General development guidelines
-  - `html.mdc`: Guidelines for HTML forms in Kodosumi
-  - `installation.mdc`: Setup and installation guidance
-  - `kodosumi.mdc`: Kodosumi-specific development rules
-  - `testing.mdc`: Testing strategies and patterns
-
-- `.cursorignore`: Specifies files and directories to be ignored by Cursor
-
-#### Working with Cursor AI Agent
-
-The Cursor AI Agent is designed to be your pair programming partner with specialized knowledge about CrewAI, Ray, and Kodosumi. Here's how to get the most out of it:
-
-1. **File-Specific Assistance**: The AI Agent automatically activates relevant rules based on the file you're working on:
-   - When editing crew files, it provides CrewAI agent and task guidance
-   - When working on flow files, it offers Ray integration patterns
-   - When modifying HTML templates, it suggests Kodosumi-specific form elements
-
-2. **Ask Domain-Specific Questions**: You can directly ask the AI Agent questions about:
-   - "How do I implement a CrewAI agent with web search capabilities?"
-   - "What's the best way to handle Ray task failures?"
-   - "How should I structure my Kodosumi form for this flow?"
-
-3. **Code Generation**: Request the AI Agent to generate boilerplate code:
-   - "Create a new CrewAI agent for data analysis"
-   - "Add a Ray remote function for parallel processing"
-   - "Generate a Kodosumi form for my flow parameters"
-
-4. **Troubleshooting**: When you encounter errors, share them with the AI Agent:
-   - "I'm getting this Ray error: [error message]"
-   - "My CrewAI flow isn't returning structured data"
-   - "Kodosumi deployment is failing with this error"
-
-The AI Agent combines general coding knowledge with the specialized domain knowledge from the Cursor rules to provide contextually relevant assistance throughout your development process.
-
-#### Cursor Rules Structure
-
-The template uses Cursor's rules system to provide context-specific guidance to the AI assistant:
-
-1. **Crews Rules**: Guidelines for implementing CrewAI crews, agents, and tasks
-   - Agent role definitions
-   - Task creation patterns
-   - Tool integration
-   - Agent-to-agent communication
-
-2. **Flow Rules**: Best practices for CrewAI flow development
-   - State management
-   - Error handling
-   - Parallel processing
-   - Result formatting
-
-3. **Frameworks Rules**: Preferred frameworks and patterns
-   - Ray for distributed processing
-   - CrewAI for agent-based workflows
-   - Kodosumi for serving and deployment
-
-4. **HTML Rules**: Guidelines for creating HTML forms in Kodosumi
-   - Form structure
-   - Input validation
-   - User experience considerations
-   - Responsive design
-
-5. **Testing Rules**: Testing strategies for CrewAI flows
-   - Unit testing crews and agents
-   - Integration testing flows
-   - Testing with Ray
-   - Testing Kodosumi deployment
-
-Each rule file includes:
-- A description of the rule
-- File patterns (globs) to which the rule applies
-- Detailed guidance in Markdown format
-
-#### Custom Snippets
-
-The following custom snippets are available in Python files:
-
-- `rayremote`: Create a Ray remote function
-- `rayremoteclass`: Create a Ray remote class
-- `rayinit`: Initialize Ray or connect to an existing cluster
-- `crewaiflow`: Create a CrewAI Flow with output format support
-- `crewaiagent`: Create a CrewAI Agent
-- `crewaitask`: Create a CrewAI Task
-- `kodosumiapp`: Create a Kodosumi service with ServeAPI
-- `outputformat`: Handle output format in a Kodosumi service
-- `kodomsumitest`: Commands for deploying and testing with Kodosumi
-- `localtestmain`: Create a main block for local testing with Ray
-- `exasearch`: Create an Exa.ai web search tool for CrewAI
-- `rayserveconfig`: Create a Ray Serve config.yaml file
-
-### Code Quality Tools
-
-The template is configured with several code quality tools:
-
-- **Black**: Code formatter
-- **isort**: Import sorter
-- **Ruff**: Fast Python linter
-- **mypy**: Static type checker
-
-These tools are configured in `pyproject.toml` and can be run manually or automatically through Cursor.
-
-## Development and Testing Workflow
-
-This template follows a specific development and testing workflow to ensure that flows work correctly in both local and Kodosumi environments:
-
-### 1. Local Development with Ray
-
-Start by developing and testing your flow locally with Ray:
-
-```bash
-# Start a local Ray cluster
-ray start --head
-
-# Run the flow directly
-python -m workflows.crewai_flow.main
-```
-
-This allows you to quickly iterate on your flow without deploying to Kodosumi.
-
-### 2. Local Kodosumi Testing
-
-Once your flow works locally, test it with a local Kodosumi deployment:
-
-```bash
-# Ensure Ray is running
-ray status
-
-# Start Kodosumi spooler
-python -m kodosumi.cli spool
-
-# Deploy with Ray Serve
-serve deploy ./config.yaml
-
-# Start Kodosumi services
-python -m kodosumi.cli serve
-```
-
-Access your flow at http://localhost:3370 and test it through the Kodosumi UI.
-
-### 3. Production Deployment
-
-After testing locally, you can deploy to a production Kodosumi environment:
-
-```bash
-# Update production config.yaml with appropriate settings
-# Deploy to production Ray Serve instance
-serve deploy ./production_config.yaml
-```
-
-### Testing Both Output Formats
-
-At each stage, test both output formats to ensure they work correctly:
-
-```bash
-# Test markdown output (default)
-python -m workflows.crewai_flow.main output_format=markdown
-
-# Test JSON output
-python -m workflows.crewai_flow.main output_format=json
-```
-
-In the Kodosumi UI, use the output format dropdown to test both formats.
-
-### Error Handling
-
-Ensure your flow includes proper error handling for:
-
-- Ray cluster connection failures
-- Invalid input parameters
-- API key issues
-- Output format validation
-
-This will make your flow more robust in both local and Kodosumi environments. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 

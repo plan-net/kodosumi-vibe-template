@@ -1,4 +1,4 @@
-# CrewAI Flow Template
+# Kodosumi Vibe Example
 
 This template provides a structured approach to building CrewAI flows with parallel processing capabilities.
 

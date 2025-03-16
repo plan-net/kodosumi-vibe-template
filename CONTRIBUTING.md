@@ -1,6 +1,6 @@
-# Contributing to CrewAI Flow Template
+# Contributing to Kodosumi Vibe Template
 
-We love your input! We want to make contributing to the CrewAI Flow Template as easy and transparent as possible, whether it's:
+We love your input! We want to make contributing to the Kodosumi Vibe Template as easy and transparent as possible, whether it's:
 
 - Reporting a bug
 - Discussing the current state of the code
@@ -29,9 +29,9 @@ We use GitHub to host code, to track issues and feature requests, as well as acc
 
 In short, when you submit code changes, your submissions are understood to be under the same [MIT License](LICENSE) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-## Report Bugs Using GitHub's [Issue Tracker](https://github.com/kodosumi/crewai-flow-template/issues)
+## Report Bugs Using GitHub's [Issue Tracker](https://github.com/plan-net/kodosumi-vibe-template/issues)
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/kodosumi/crewai-flow-template/issues/new); it's that easy!
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/plan-net/kodosumi-vibe-template/issues/new); it's that easy!
 
 ## Write Bug Reports with Detail, Background, and Sample Code
 

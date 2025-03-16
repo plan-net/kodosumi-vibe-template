@@ -1,4 +1,4 @@
-# CrewAI Flow Template
+# Kodosumi Vibe Template
 
 A template for building AI workflows with CrewAI and Kodosumi.
 
@@ -6,8 +6,8 @@ A template for building AI workflows with CrewAI and Kodosumi.
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/kodosumi/crewai-flow-template.git
-   cd crewai-flow-template
+   git clone https://github.com/plan-net/kodosumi-vibe-template.git
+   cd kodosumi-vibe-template
    ```
 
 2. **Install Dependencies**

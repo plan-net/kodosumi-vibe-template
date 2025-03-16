@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide helps you diagnose and resolve common issues when working with the CrewAI Flow Template and Kodosumi.
+This guide helps you diagnose and resolve common issues when working with the Kodosumi Vibe Template and Kodosumi.
 
 ## Installation Issues
 

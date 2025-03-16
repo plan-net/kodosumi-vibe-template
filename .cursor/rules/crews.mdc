@@ -11,6 +11,7 @@ alwaysApply: false
 - make sure to load the agents.yaml file as config
 - make sure to load the tasks.yaml file as config
 - make use of the crewai decorators like "@CrewBase", "@agent", "@taks" and "@crew"
+- always write unit tests in the top-level tests folder and test single crews with pytest first
 
 ## Recommended Patterns for Agents
 - always pick the best possible model from ChatGPT for each agent
@@ -25,3 +26,4 @@ alwaysApply: false
 ## Avoid Patterns
 - Avoid using other web search tools when exa.ai can be used
 - Avoid implementing custom web search solutions
+- Avoid skip writing the unit-tests for a single crew

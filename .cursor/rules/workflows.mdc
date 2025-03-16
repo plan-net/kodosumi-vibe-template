@@ -3,5 +3,7 @@ description: when creating a new workflow in the workflows folder
 globs: 
 alwaysApply: false
 ---
+# Creating new workflows
 - make sure to also create a new folder for the unit-tests for this workflow in tests/workflows
 - make sure to setup the basic structure according to our example workflow
+- make sure to edit the config.yaml file and append the new workflow as application in the list of applications

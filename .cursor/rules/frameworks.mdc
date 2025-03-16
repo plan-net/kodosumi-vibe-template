@@ -1,0 +1,22 @@
+---
+description: Preferred Frameworks to work with within this project
+globs: 
+alwaysApply: true
+---
+# Framework Preferences for CrewAI Flows
+
+## Preferred Frameworks
+- Ray for distributed processing
+- CrewAI for agent-based workflows
+- Kodosumi for serving and deployment
+
+## Preferred Tools for CrewAI
+- exa.ai for web search
+
+## Recommended Patterns
+- Always use Ray for distributed processing
+- Always use CrewAI for agent-based workflows
+- Always use Kodosumi for serving and deployment
+
+## General Patterns to Avoid
+- Avoid implementing agent frameworks from scratch, use CrewAI

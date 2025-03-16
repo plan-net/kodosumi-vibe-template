@@ -442,27 +442,34 @@ This template includes configuration for the [Cursor](https://cursor.sh/) editor
   - Linting with Ruff and mypy
   - Custom snippets for Ray and CrewAI
 
-- `.cursorrules`: Configuration file for Cursor's AI assistant with:
-  - Rules for handling output formats
-  - Deployment workflow guidance
-  - Framework preferences and patterns
-  - Context files for better AI understanding
+- `.cursor/rules/`: Directory containing rules for Cursor's AI assistant:
+  - `role_expertise.mdc`: Defines the AI assistant's role and expertise
+  - `output_formats.mdc`: Rules for handling output formats in CrewAI flows
+  - `deployment_workflow.mdc`: Workflow for developing and deploying CrewAI flows
+  - `framework_preferences.mdc`: Preferred frameworks and patterns
+  - `crews.mdc`: Guidelines for implementing CrewAI crews
+  - `html.mdc`: Guidelines for HTML forms in Kodosumi
+  - `html_templates.mdc`: Specific guidelines for HTML templates
 
 - `.cursorignore`: Specifies files and directories to be ignored by Cursor
 
-#### Cursor Configuration Files
+#### Cursor Rules Structure
 
-The template uses two separate configuration files for Cursor:
+The template uses Cursor's rules system to provide context-specific guidance to the AI assistant:
 
-1. **`.cursor.json`**: Controls editor behavior like formatting, linting, and snippets.
-   - This file is used by the Cursor editor itself
-   - Contains settings for code formatters, linters, and snippets
-   - Does not contain AI guidance
+1. **Role and Expertise**: Defines the AI assistant's role as an expert in CrewAI, Ray, and Kodosumi.
+2. **Output Formats**: Provides guidelines for handling output formats in CrewAI flows.
+3. **Deployment Workflow**: Outlines the stages for local development, Kodosumi deployment, and production deployment.
+4. **Framework Preferences**: Lists preferred frameworks and patterns to follow or avoid.
+5. **Crews**: Provides guidelines for implementing CrewAI crews.
+6. **HTML**: Offers guidance for creating HTML forms in Kodosumi.
+7. **HTML Templates**: Provides specific guidelines for HTML templates.
 
-2. **`.cursorrules`**: Guides the AI assistant's behavior.
-   - This file is used by the Cursor AI assistant
-   - Contains rules, patterns, and guidelines for AI recommendations
-   - Includes our output format rules and deployment workflow
+Each rule file includes:
+- A description of the rule
+- File patterns (globs) to which the rule applies
+- Whether the rule should always be applied
+- Detailed guidance in Markdown format
 
 #### Custom Snippets
 

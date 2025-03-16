@@ -1,6 +1,16 @@
 ---
-description: 
+description: When setting up and testing with Kodosumi
 globs: 
 alwaysApply: false
 ---
- 
+# Kodosumi related instruction
+
+## Recommended Patterns
+- keep the [config.yaml](mdc:config.yaml) on point with human readable names in line with the project name for name and route
+- always use as the import_path the [serve.py](mdc:workflows/crewai_flow/serve.py) fastapp, which is the Ray Serve binding
+- never forget to set all ENV VARS in the config.yaml which are needed for the application
+- always make sure you have the GET "/" endpoint to render the HTML and capture the inputs
+- always makre sure you have the PPST "/" endpoint to start the flow execution with the form
+
+ ## Avoid Patterns
+ - Avoid using FastAPI directly, use kodosumi.serve.ServeAPI instead

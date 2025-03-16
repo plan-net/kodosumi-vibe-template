@@ -1,5 +1,5 @@
 ---
-description: Setting up Crews with CrewAI as part of the flow
+description: Setting up Crews with CrewAI as part of the flow. 
 globs: workflows/crews/*
 alwaysApply: false
 ---

@@ -4,7 +4,9 @@ globs: *.html
 alwaysApply: false
 ---
 
-# Your rule content 
+# HTML Related Instructions
 
-- You can @ files here
-- You can use markdown but dont have to
+- keep using the templating language Jinja2Templates
+- don't change the [_base.html](mdc:workflows/crewai_flow/templates/_base.html)
+- only expand the [form.html](mdc:workflows/crewai_flow/templates/form.html) to capture all required input paramters for the CrewAI flow
+- make choosing the output format (markdown or json) always a dropdown menu in the form

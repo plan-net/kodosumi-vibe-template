@@ -15,15 +15,15 @@ logging_config:
 applications:
 - name: crewai_flow
   route_prefix: /crewai_flow
-  import_path: crewai_flow.serve:fast_app
+  import_path: workflows.crewai_flow.serve:fast_app
   runtime_env:
     env_vars:
-      PYTHONPATH: ./workflows
+      PYTHONPATH: .
       OPENAI_API_KEY: your_openai_api_key_here
       EXA_API_KEY: your_exa_api_key_here
       OTEL_SDK_DISABLED: "true"
     pip:
-    - crewai==0.100.*
+    - crewai==0.105.0
     - ray>=2.6.0
     - langchain>=0.0.267
     - langchain-openai>=0.0.2

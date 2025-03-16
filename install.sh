@@ -10,21 +10,25 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Setting up kodosumi-vibe-template environment...${NC}"
 
-# Check if Python 3.8+ is installed
-python_version=$(python3 --version 2>&1 | awk '{print $2}')
-python_major=$(echo $python_version | cut -d. -f1)
-python_minor=$(echo $python_version | cut -d. -f2)
-
-if [ "$python_major" -lt 3 ] || ([ "$python_major" -eq 3 ] && [ "$python_minor" -lt 8 ]); then
-    echo -e "${RED}Error: Python 3.8 or higher is required (found $python_version)${NC}"
+# Check if Python 3.12.2 is installed
+if command -v python3.12 &>/dev/null; then
+    python_version=$(python3.12 --version 2>&1 | awk '{print $2}')
+    if [ "$python_version" = "3.12.2" ]; then
+        echo -e "${GREEN}Python $python_version detected${NC}"
+    else
+        echo -e "${RED}Error: Python 3.12.2 is required but found $python_version${NC}"
+        echo -e "${YELLOW}Please install Python 3.12.2 specifically and try again${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}Error: Python 3.12.2 is required but not found${NC}"
+    echo -e "${YELLOW}Please install Python 3.12.2 specifically and try again${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Python $python_version detected${NC}"
-
 # Create and activate virtual environment
 echo -e "${YELLOW}Creating virtual environment...${NC}"
-python3 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 
 # Upgrade pip
@@ -38,6 +42,10 @@ pip install -e .
 # Install development dependencies
 echo -e "${YELLOW}Installing development dependencies...${NC}"
 pip install -e ".[dev]"
+
+# Install dependencies with specific versions
+echo -e "${YELLOW}Installing dependencies with specific versions...${NC}"
+pip install "crewai==0.105.0" "ray>=2.6.0" "langchain>=0.0.267" "langchain-openai>=0.0.2" "langchain-community>=0.0.10"
 
 # Install Kodosumi from GitHub
 echo -e "${BLUE}NOTE: Kodosumi is not available on PyPI and must be installed from GitHub${NC}"

@@ -1,6 +1,29 @@
 ---
-description: 
-globs: 
+description: When developing the CrewAI flow
+globs: main.py
 alwaysApply: false
 ---
+# Flow Development in Crewai
+
+## Recommended Patterns
+
+### Ray Related
+- Prefer Ray's remote functions for parallelization
+- Use Ray's actor model for stateful computations
+- Use the __main__ block in flow modules to enable local testing with Ray
+- The __main__ block will only be called if executed locally, but not when running on Kodosumi
+
+### CrewAI Related
+- Implement CrewAI crews for complex AI agent tasks
+- Always include output_format parameter in CrewAI flows with markdown as default
+
+### Flow Related
+- make sure to track in the global flow state the desired output format for the flow
+- the desired output format can either be "markdown" or "json"
+- this desired output should be by default "markdown", but it can be overwritten with "json"
+- make sure that the last step in the flow actually returns the desired output format
+
+## Avoid Patterns
+- Avoid using threading or multiprocessing directly, prefer Ray instead
  
+

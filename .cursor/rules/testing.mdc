@@ -1,5 +1,5 @@
 ---
-description: When you are testing the application
+description: When you want to run and test the application
 globs: 
 alwaysApply: false
 ---

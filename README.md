@@ -421,9 +421,9 @@ The template includes a comprehensive example with multiple steps:
 
 ## Requirements
 
-- Python 3.8+
-- CrewAI
-- Ray
+- Python 3.12.2 (exactly)
+- CrewAI 0.105.0
+- Ray 2.6.0+
 - FastAPI
 - Kodosumi
 

@@ -90,9 +90,9 @@ class CrewAIFlowState(BaseModel):
     """
     dataset_name: str = "sales_data"  # Default dataset
     output_format: str = "markdown"   # Default output format (markdown or json)
-    analysis_results: Dict[str, Any] = None
+    analysis_results: Dict[str, Any] = {}  # Initialize as empty dict instead of None
     parallel_processing_results: List[Dict[str, Any]] = []
-    final_insights: Dict[str, Any] = None
+    final_insights: Dict[str, Any] = {}  # Initialize as empty dict instead of None
 
     @property
     def is_valid_output_format(self) -> bool:

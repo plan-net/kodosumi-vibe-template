@@ -5,7 +5,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task, output_pydantic, before_kickoff, after_kickoff
+from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
 from langchain_openai import ChatOpenAI
 
 # Configure logging
@@ -101,16 +101,6 @@ class FirstCrew:
             logger.error(f"Error loading config from {config_path}: {e}")
             return {}
     
-    @output_pydantic
-    def data_analysis_output(self) -> DataAnalysisOutput:
-        """Register the DataAnalysisOutput model with CrewBase"""
-        return DataAnalysisOutput
-    
-    @output_pydantic
-    def business_insights_output(self) -> BusinessInsightsOutput:
-        """Register the BusinessInsightsOutput model with CrewBase"""
-        return BusinessInsightsOutput
-    
     @agent
     def data_analyst(self) -> Agent:
         """
@@ -183,11 +173,11 @@ class FirstCrew:
                 
             logger.info(f"Creating analyze_data_task with config: {task_config}")
             
-            # Set the output_pydantic class
+            # Set the output_pydantic directly in the Task constructor
             return Task(
                 config=task_config,
                 agent=self.data_analyst(),
-                output_pydantic=DataAnalysisOutput
+                output_pydantic=DataAnalysisOutput  # Standard CrewAI approach
             )
         except Exception as e:
             logger.error(f"Error creating analyze_data_task: {e}")
@@ -231,7 +221,7 @@ class FirstCrew:
                 config=task_config,
                 agent=self.insights_specialist(),
                 context=[self.analyze_data_task()],
-                output_pydantic=BusinessInsightsOutput
+                output_pydantic=BusinessInsightsOutput  # Standard CrewAI approach
             )
         except Exception as e:
             logger.error(f"Error creating generate_insights_task: {e}")

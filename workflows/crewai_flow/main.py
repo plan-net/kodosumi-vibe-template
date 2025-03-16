@@ -238,7 +238,13 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             print("No insights to process.")
             return
         
-        # Process insights using Ray
+        # Check if Ray is initialized
+        if not ray.is_initialized():
+            print("Ray is not initialized. Processing insights locally...")
+            self.state.parallel_processing_results = self._process_insights_locally(insights)
+            return
+        
+        # Process insights using Ray with improved error handling
         try:
             # Define a remote function to process each insight
             @ray.remote(num_cpus=0.1, max_retries=3)  # Use minimal resources and allow retries
@@ -256,57 +262,63 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
                     "processed_by": f"Worker-{index}"
                 }
             
-            # Process insights in smaller batches to reduce chance of timeouts
-            print("Using Ray for parallel processing...")
-            processed_results = []
+            # First try to process a single insight to test Ray functionality
+            print("Testing Ray with a single insight...")
+            try:
+                test_result = ray.get(process_insight.remote(insights[0], 0), timeout=10.0)
+                print(f"Ray test successful: {test_result}")
+                use_ray = True
+            except (ray.exceptions.GetTimeoutError, TimeoutError) as timeout_err:
+                print(f"Ray test failed with timeout: {timeout_err}. Falling back to local processing for all insights.")
+                use_ray = False
+                self.state.parallel_processing_results = self._process_insights_locally(insights)
+                return
             
-            # Process in very small batches (1 insight at a time) to minimize timeout issues
-            batch_size = 1
-            for i in range(0, len(insights), batch_size):
-                batch = insights[i:i+batch_size]
-                process_tasks = [process_insight.remote(insight, i+j) for j, insight in enumerate(batch)]
+            if use_ray:
+                # Process insights in small batches with increased timeout
+                print("Using Ray for parallel processing...")
+                processed_results = []
                 
-                try:
-                    # Use a shorter timeout for each batch
-                    batch_results = ray.get(process_tasks, timeout=3.0)
-                    processed_results.extend(batch_results)
-                    print(f"Successfully processed batch {i//batch_size + 1} with {len(batch)} insights")
-                except (ray.exceptions.GetTimeoutError, TimeoutError) as timeout_err:
-                    print(f"Batch {i//batch_size + 1} timed out: {timeout_err}. Processing remaining insights locally...")
-                    # Process the remaining insights locally
-                    for j, insight in enumerate(batch):
-                        processed_results.append({
-                            "insight": insight,
-                            "priority": random.randint(1, 10),
-                            "processed_by": f"Local-{i+j}"
-                        })
-            
-            print(f"Successfully processed {len(processed_results)} insights in total")
+                # Process in very small batches (1 insight at a time) to minimize timeout issues
+                batch_size = 1
+                for i in range(0, len(insights), batch_size):
+                    batch = insights[i:i+batch_size]
+                    process_tasks = [process_insight.remote(insight, i+j) for j, insight in enumerate(batch)]
+                    
+                    try:
+                        # Use a longer timeout for each batch (10 seconds instead of 3)
+                        print(f"Processing batch {i//batch_size + 1} with {len(batch)} insights (timeout: 10s)...")
+                        batch_results = ray.get(process_tasks, timeout=10.0)
+                        processed_results.extend(batch_results)
+                        print(f"Successfully processed batch {i//batch_size + 1}")
+                    except (ray.exceptions.GetTimeoutError, TimeoutError) as timeout_err:
+                        print(f"Batch {i//batch_size + 1} timed out: {timeout_err}. Processing this batch locally...")
+                        # Process the remaining insights locally
+                        for j, insight in enumerate(batch):
+                            processed_results.append({
+                                "insight": insight,
+                                "priority": random.randint(1, 10),
+                                "processed_by": f"Local-{i+j}"
+                            })
+                
+                print(f"Successfully processed {len(processed_results)} insights in total")
+                self.state.parallel_processing_results = processed_results
         except Exception as e:
             # Fallback to local processing if Ray fails
-            print(f"Ray processing failed: {e}. Falling back to local processing...")
-            processed_results = []
-            for i, insight in enumerate(insights):
-                # Simulate some processing time
-                time.sleep(random.uniform(0.1, 0.3))
-                
-                # Generate a priority score
-                priority = random.randint(1, 10)
-                
-                processed_results.append({
-                    "insight": insight,
-                    "priority": priority,
-                    "processed_by": f"Local-{i}"
-                })
+            print(f"Ray processing failed with error: {e}")
+            print(f"Error type: {type(e).__name__}")
+            print(f"Traceback: {traceback.format_exc()}")
+            print("Falling back to local processing...")
+            self.state.parallel_processing_results = self._process_insights_locally(insights)
         
         # Sort results by priority (highest first)
         self.state.parallel_processing_results = sorted(
-            processed_results, 
+            self.state.parallel_processing_results, 
             key=lambda x: x["priority"], 
             reverse=True
         )
         
-        print(f"Processed {len(processed_results)} insights in parallel.")
+        print(f"Processed {len(self.state.parallel_processing_results)} insights in parallel.")
 
     @listen(process_insights_in_parallel)
     def finalize_results(self):

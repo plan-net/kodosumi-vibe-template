@@ -8,6 +8,7 @@ alwaysApply: true
 - develop user requirements step-by-step by writing the test first and then implement the feature against it
 - write tests for single crews, the main flow and the serve application
 - when fixing bugs make sure to adjust the tests if necessary
+- if you have access to Github MCP Server prefer using it over git in Terminal
 
 ## Rules to take into account
 - when you install and setup the project make sure to consider all installation rules

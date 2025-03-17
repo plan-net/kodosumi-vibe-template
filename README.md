@@ -50,6 +50,27 @@ A template for building AI workflows with CrewAI and Kodosumi.
 - 📊 Web interface for workflow management
 - 🔧 Extensible and customizable
 
+## Recommended MCP Servers
+
+For enhanced functionality when working with AI assistants, we recommend using Model Context Protocol (MCP) servers. These servers enable AI assistants to perform specific tasks through standardized APIs.
+
+### GitHub MCP Server
+
+The [GitHub MCP Server](https://github.com/modelcontextprotocol/servers/tree/main/src/github) is particularly useful for this template, providing capabilities such as:
+
+- Repository management (create, fork, clone)
+- File operations (create, update, delete)
+- Issue and PR management
+- Code search functionality
+- Branch management
+
+To set up the GitHub MCP Server:
+
+1. Create a GitHub Personal Access Token with appropriate permissions
+2. Configure the server in your environment
+
+For detailed setup instructions, refer to the [GitHub MCP Server documentation](https://github.com/modelcontextprotocol/servers/tree/main/src/github).
+
 ## Development with Cursor
 
 This template includes specialized Cursor rules that provide AI-assisted development following test-driven development best practices.

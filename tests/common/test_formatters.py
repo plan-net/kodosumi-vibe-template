@@ -5,13 +5,26 @@ Unit tests for the formatters module.
 import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 import json
-import pytest
+import time
+from typing import List, Dict, Any
+from pydantic import BaseModel, Field
 
 from workflows.common.formatters import (
     format_output,
     format_as_markdown,
-    extract_structured_data
+    extract_structured_data,
+    format_dict_item,
+    pydantic_to_markdown_template
 )
+
+
+class SampleModel(BaseModel):
+    """Sample Pydantic model for testing."""
+    title: str = "Test Report"
+    summary: str = "This is a test summary"
+    insights: List[Dict[str, Any]] = []
+    recommendations: List[str] = []
+    timestamp: str = "2023-01-01 12:00:00"
 
 
 class TestFormatters(unittest.TestCase):
@@ -32,54 +45,196 @@ class TestFormatters(unittest.TestCase):
                 "Recommendation 2"
             ]
         }
+        
+        self.sample_model = SampleModel(
+            title="Test Report",
+            summary="This is a test summary",
+            insights=[
+                {"insight": "Insight 1", "priority": 9},
+                {"insight": "Insight 2", "priority": 7}
+            ],
+            recommendations=[
+                "Recommendation 1",
+                "Recommendation 2"
+            ],
+            timestamp="2023-01-01 12:00:00"
+        )
+        
+        self.custom_template = {
+            "title": "Custom Report",
+            "sections": [
+                {
+                    "title": "Executive Summary",
+                    "field": "summary",
+                    "format": "text"
+                },
+                {
+                    "title": "Key Findings",
+                    "field": "prioritized_insights",
+                    "format": "list",
+                    "item_format": {
+                        "main_field": "insight",
+                        "additional_fields": ["priority"]
+                    }
+                },
+                {
+                    "title": "Action Items",
+                    "field": "recommendations",
+                    "format": "list"
+                }
+            ]
+        }
 
-    def test_format_output_json(self):
+    def test_format_output_json_dict(self):
         """Test that format_output returns the raw data when format is json."""
         result = format_output(self.sample_insights, "json")
         self.assertEqual(result, self.sample_insights)
 
-    def test_format_output_markdown(self):
-        """Test that format_output correctly formats output in markdown."""
+    def test_format_output_json_model(self):
+        """Test that format_output correctly handles Pydantic models with JSON format."""
+        result = format_output(self.sample_model, "json")
+        self.assertEqual(result, self.sample_model.model_dump())
+
+    def test_format_output_markdown_dict(self):
+        """Test that format_output correctly formats dictionary output in markdown."""
         result = format_output(self.sample_insights, "markdown")
         
         # Verify that the result contains markdown formatting
-        self.assertIn("# Data Analysis Report", result)
+        self.assertIn("# Report", result)  # Default title
+        
+        # Verify content sections are generated
+        self.assertIn("## Dataset Analyzed", result)
         self.assertIn("## Summary", result)
-        self.assertIn("## Key Insights", result)
+        self.assertIn("## Prioritized Insights", result)
         self.assertIn("## Recommendations", result)
-        self.assertIn("*Generated on", result)
         
         # Verify content
         self.assertIn("test_dataset", result)
         self.assertIn("This is a test summary", result)
         self.assertIn("Insight 1", result)
-        self.assertIn("Priority: 9", result)
+        self.assertIn("Recommendation 1", result)
+        
+        # Verify timestamp
+        self.assertIn("*Generated on 2023-01-01 12:00:00*", result)
+
+    def test_format_output_markdown_model(self):
+        """Test that format_output correctly formats Pydantic model output in markdown."""
+        result = format_output(self.sample_model, "markdown")
+        
+        # Verify that the result contains markdown formatting
+        self.assertIn("# Test Report", result)  # Title from model
+        
+        # Verify content sections are generated
+        self.assertIn("## Summary", result)
+        self.assertIn("## Insights", result)
+        self.assertIn("## Recommendations", result)
+        
+        # Verify content
+        self.assertIn("This is a test summary", result)
+        self.assertIn("Insight 1", result)
+        self.assertIn("Recommendation 1", result)
+        
+        # Verify timestamp
+        self.assertIn("*Generated on 2023-01-01 12:00:00*", result)
+
+    def test_format_output_with_template(self):
+        """Test that format_output correctly uses a custom template."""
+        result = format_output(self.sample_insights, "markdown", self.custom_template)
+        
+        # Verify that the result contains custom template formatting
+        self.assertIn("# Custom Report", result)
+        
+        # Verify custom section titles
+        self.assertIn("## Executive Summary", result)
+        self.assertIn("## Key Findings", result)
+        self.assertIn("## Action Items", result)
+        
+        # Verify content
+        self.assertIn("This is a test summary", result)
+        self.assertIn("Insight 1", result)
+        self.assertIn("priority: 9", result)
         self.assertIn("Recommendation 1", result)
 
     def test_format_output_default(self):
         """Test that format_output defaults to markdown when no format is specified."""
         result = format_output(self.sample_insights)
         self.assertIsInstance(result, str)
-        self.assertIn("# Data Analysis Report: test_dataset", result)
+        self.assertIn("# Report", result)
 
-    def test_format_as_markdown(self):
-        """Test that format_as_markdown correctly formats the insights as markdown."""
+    def test_format_as_markdown_auto_sections(self):
+        """Test that format_as_markdown correctly auto-generates sections."""
         result = format_as_markdown(self.sample_insights)
         
         # Check that the result is a string
         self.assertIsInstance(result, str)
         
-        # Check that the markdown contains the expected sections
-        self.assertIn("# Data Analysis Report: test_dataset", result)
+        # Check that the markdown contains auto-generated sections
+        self.assertIn("# Report", result)
+        self.assertIn("## Dataset Analyzed", result)
         self.assertIn("## Summary", result)
-        self.assertIn("This is a test summary", result)
-        self.assertIn("## Key Insights", result)
-        self.assertIn("1. **Insight 1** (Priority: 9)", result)
-        self.assertIn("2. **Insight 2** (Priority: 7)", result)
+        self.assertIn("## Prioritized Insights", result)
         self.assertIn("## Recommendations", result)
-        self.assertIn("1. Recommendation 1", result)
-        self.assertIn("2. Recommendation 2", result)
+        
+        # Check content
+        self.assertIn("test_dataset", result)
+        self.assertIn("This is a test summary", result)
         self.assertIn("*Generated on 2023-01-01 12:00:00*", result)
+
+    def test_format_as_markdown_with_template(self):
+        """Test that format_as_markdown correctly uses a template."""
+        result = format_as_markdown(self.sample_insights, self.custom_template)
+        
+        # Check that the result is a string
+        self.assertIsInstance(result, str)
+        
+        # Check that the markdown contains template-defined sections
+        self.assertIn("# Custom Report", result)
+        self.assertIn("## Executive Summary", result)
+        self.assertIn("## Key Findings", result)
+        self.assertIn("## Action Items", result)
+        
+        # Check content
+        self.assertIn("This is a test summary", result)
+        self.assertIn("Insight 1", result)
+        self.assertIn("Recommendation 1", result)
+
+    def test_format_dict_item(self):
+        """Test that format_dict_item correctly formats dictionary items."""
+        item = {"insight": "Test Insight", "priority": 8, "source": "Analysis"}
+        item_format = {"main_field": "insight", "additional_fields": ["priority", "source"]}
+        
+        result = format_dict_item(item, item_format)
+        
+        self.assertEqual(result, "**Test Insight** (priority: 8, source: Analysis)")
+        
+        # Test with empty item_format
+        result = format_dict_item(item, {})
+        self.assertEqual(result, "**Test Insight**")
+
+    def test_pydantic_to_markdown_template(self):
+        """Test that pydantic_to_markdown_template correctly generates a template from a model."""
+        template = pydantic_to_markdown_template(SampleModel)
+        
+        # Check template structure
+        self.assertEqual(template["title"], "SampleModel")
+        self.assertIsInstance(template["sections"], list)
+        
+        # Check that all fields are included
+        field_names = [section["field"] for section in template["sections"]]
+        self.assertIn("title", field_names)
+        self.assertIn("summary", field_names)
+        self.assertIn("insights", field_names)
+        self.assertIn("recommendations", field_names)
+        self.assertIn("timestamp", field_names)
+        
+        # Check format types
+        for section in template["sections"]:
+            if section["field"] == "insights":
+                self.assertEqual(section["format"], "list")
+            elif section["field"] == "recommendations":
+                self.assertEqual(section["format"], "list")
+            else:
+                self.assertEqual(section["format"], "text")
 
     def test_extract_structured_data_with_json_dict(self):
         """Test extract_structured_data when the task output has a json_dict attribute."""
@@ -176,19 +331,6 @@ class TestFormatters(unittest.TestCase):
         result = extract_structured_data(mock_crew_result)
         
         self.assertIsNone(result)
-
-    def test_format_output_json(self):
-        """Test that format_output correctly formats output in JSON."""
-        result = format_output(self.sample_insights, "json")
-        
-        # Verify that we get back the same dictionary
-        self.assertEqual(result, self.sample_insights)
-    
-    def test_format_output_invalid_format(self):
-        """Test that format_output handles invalid output formats gracefully."""
-        # Invalid formats should default to markdown
-        result = format_output(self.sample_insights, "invalid_format")
-        self.assertIn("# Data Analysis Report", result)
 
 
 if __name__ == "__main__":

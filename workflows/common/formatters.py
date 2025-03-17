@@ -5,65 +5,236 @@ These functions handle the formatting of flow outputs in different formats.
 
 import time
 import json
-from typing import Dict, Any, List, Optional
+import inspect
+from typing import Dict, Any, List, Optional, Type, Union, get_type_hints
+from pydantic import BaseModel
 
-def format_output(insights: Dict[str, Any], output_format: str = "markdown") -> Any:
+def format_output(
+    data: Union[BaseModel, Dict[str, Any]], 
+    output_format: str = "markdown",
+    template: Optional[Dict[str, Any]] = None
+) -> Any:
     """
     Format the output based on the requested format (markdown or JSON).
     
     Args:
-        insights: The insights data to format
+        data: The data to format (Pydantic model or dictionary)
         output_format: The desired output format ("markdown" or "json")
+        template: Optional template configuration for markdown formatting
         
     Returns:
         The formatted output in the requested format
     """
+    # Convert Pydantic model to dict if needed
+    if isinstance(data, BaseModel):
+        data_dict = data.model_dump()
+    else:
+        data_dict = data
+    
     if output_format.lower() == "json":
         # For JSON format, return the raw data structure
-        return insights
+        return data_dict
     else:
         # For markdown format, convert the data to a formatted markdown string
-        return format_as_markdown(insights)
+        return format_as_markdown(data_dict, template)
 
-def format_as_markdown(insights: Dict[str, Any]) -> str:
+def format_as_markdown(
+    data: Dict[str, Any], 
+    template: Optional[Dict[str, Any]] = None
+) -> str:
     """
-    Format the insights as a markdown string.
+    Format the data as a markdown string.
     
     Args:
-        insights: The insights data to format
+        data: The data to format
+        template: Optional template configuration for customizing the markdown output
         
     Returns:
         A formatted markdown string
     """
-    dataset_name = insights.get("dataset_analyzed", "Unknown dataset")
-    timestamp = insights.get("timestamp", time.strftime("%Y-%m-%d %H:%M:%S"))
-    summary = insights.get("summary", "No summary available")
-    prioritized_insights = insights.get("prioritized_insights", [])
-    recommendations = insights.get("recommendations", [])
+    # Default template settings
+    default_template = {
+        "title": "Report",
+        "timestamp_field": "timestamp",
+        "timestamp_format": "%Y-%m-%d %H:%M:%S",
+        "sections": [],  # List of section configurations
+        "include_timestamp": True,
+    }
     
-    markdown = f"""# Data Analysis Report: {dataset_name}
-
-## Summary
-{summary}
-
-## Key Insights
-"""
+    # Merge provided template with defaults
+    template = {**default_template, **(template or {})}
     
-    # Add prioritized insights
-    for i, insight in enumerate(prioritized_insights, 1):
-        priority = insight.get("priority", "Unknown")
-        insight_text = insight.get("insight", "No insight available")
-        markdown += f"{i}. **{insight_text}** (Priority: {priority})\n"
+    # Get title from template or data
+    title = data.get("title", template["title"])
     
-    # Add recommendations
-    markdown += "\n## Recommendations\n"
-    for i, recommendation in enumerate(recommendations, 1):
-        markdown += f"{i}. {recommendation}\n"
+    # Start building markdown
+    markdown = f"# {title}\n\n"
     
-    # Add footer
-    markdown += f"\n\n*Generated on {timestamp}*"
+    # Process sections based on template or auto-generate from data
+    if template["sections"]:
+        # Use template-defined sections
+        for section in template["sections"]:
+            section_title = section["title"]
+            field_name = section["field"]
+            format_type = section.get("format", "text")
+            
+            # Add section header
+            markdown += f"## {section_title}\n"
+            
+            # Get section content
+            content = data.get(field_name)
+            
+            if content is not None:
+                if format_type == "list" and isinstance(content, list):
+                    # Format as numbered list
+                    for i, item in enumerate(content, 1):
+                        if isinstance(item, dict):
+                            # Handle dictionary items with special formatting
+                            item_text = format_dict_item(item, section.get("item_format", {}))
+                            markdown += f"{i}. {item_text}\n"
+                        else:
+                            # Simple list item
+                            markdown += f"{i}. {item}\n"
+                elif format_type == "text":
+                    # Simple text content
+                    markdown += f"{content}\n"
+                elif format_type == "dict" and isinstance(content, dict):
+                    # Format dictionary as key-value pairs
+                    for key, value in content.items():
+                        markdown += f"**{key}**: {value}\n"
+            
+            markdown += "\n"
+    else:
+        # Auto-generate sections from data
+        for key, value in data.items():
+            # Skip internal or special fields
+            if key.startswith("_") or key == template["timestamp_field"] or key == "title":
+                continue
+                
+            # Convert snake_case to Title Case for section headers
+            section_title = " ".join(word.capitalize() for word in key.split("_"))
+            markdown += f"## {section_title}\n"
+            
+            if isinstance(value, list):
+                # Format lists as numbered items
+                for i, item in enumerate(value, 1):
+                    if isinstance(item, dict):
+                        # For dictionaries in lists, use the first value as the main text
+                        first_value = next(iter(item.values()), "")
+                        markdown += f"{i}. **{first_value}**"
+                        
+                        # Add other key-value pairs in parentheses
+                        other_items = [(k, v) for k, v in item.items() if v != first_value]
+                        if other_items:
+                            markdown += " ("
+                            markdown += ", ".join(f"{k}: {v}" for k, v in other_items)
+                            markdown += ")"
+                        markdown += "\n"
+                    else:
+                        markdown += f"{i}. {item}\n"
+            elif isinstance(value, dict):
+                # Format dictionaries as key-value pairs
+                for k, v in value.items():
+                    markdown += f"**{k}**: {v}\n"
+            else:
+                # Simple value
+                markdown += f"{value}\n"
+                
+            markdown += "\n"
+    
+    # Add timestamp footer if requested
+    if template["include_timestamp"]:
+        timestamp_field = template["timestamp_field"]
+        timestamp = data.get(timestamp_field, time.strftime(template["timestamp_format"]))
+        markdown += f"\n\n*Generated on {timestamp}*"
     
     return markdown
+
+def format_dict_item(item: Dict[str, Any], item_format: Dict[str, Any]) -> str:
+    """
+    Format a dictionary item according to the specified format.
+    
+    Args:
+        item: The dictionary item to format
+        item_format: Format configuration for the item
+        
+    Returns:
+        A formatted string representation of the item
+    """
+    # Default to using the first field as the main text
+    main_field = item_format.get("main_field")
+    if not main_field and item:
+        main_field = next(iter(item.keys()))
+    
+    # Get the main text
+    main_text = item.get(main_field, "")
+    
+    # Format the main text
+    formatted = f"**{main_text}**"
+    
+    # Add additional fields if specified
+    additional_fields = item_format.get("additional_fields", [])
+    if additional_fields:
+        additional = []
+        for field in additional_fields:
+            if field in item and field != main_field:
+                additional.append(f"{field}: {item[field]}")
+        
+        if additional:
+            formatted += f" ({', '.join(additional)})"
+    
+    return formatted
+
+def pydantic_to_markdown_template(model_class: Type[BaseModel]) -> Dict[str, Any]:
+    """
+    Generate a markdown template based on a Pydantic model structure.
+    
+    Args:
+        model_class: The Pydantic model class
+        
+    Returns:
+        A template configuration for formatting instances of the model
+    """
+    template = {
+        "title": model_class.__name__,
+        "sections": []
+    }
+    
+    # Get field information from the model
+    fields = model_class.model_fields
+    
+    for field_name, field_info in fields.items():
+        # Skip private fields
+        if field_name.startswith("_"):
+            continue
+            
+        # Get field type
+        field_type = field_info.annotation
+        
+        # Determine format type based on field type
+        format_type = "text"
+        if "List" in str(field_type) or "list" in str(field_type):
+            format_type = "list"
+        elif "Dict" in str(field_type) or "dict" in str(field_type):
+            format_type = "dict"
+            
+        # Create section config
+        section = {
+            "title": " ".join(word.capitalize() for word in field_name.split("_")),
+            "field": field_name,
+            "format": format_type
+        }
+        
+        # Add item format for lists of dictionaries
+        if format_type == "list":
+            section["item_format"] = {
+                "main_field": "",  # Will be determined at runtime
+                "additional_fields": []  # Will be populated at runtime
+            }
+            
+        template["sections"].append(section)
+    
+    return template
 
 def extract_structured_data(crew_result: Any) -> Optional[Dict[str, Any]]:
     """
@@ -78,11 +249,6 @@ def extract_structured_data(crew_result: Any) -> Optional[Dict[str, Any]]:
         
     Returns:
         A dictionary containing the structured data, or None if extraction fails
-        
-    Note:
-        This is a utility function that handles the complexity of extracting
-        structured data from CrewAI outputs. In your own implementation, you may
-        need to adjust this based on your specific crew's output format.
     """
     try:
         # Check if we have task outputs

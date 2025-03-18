@@ -26,6 +26,10 @@ from workflows.common.processors import (
     create_fallback_response, handle_flow_error,
     process_with_ray_or_locally
 )
+from workflows.common.logging_utils import get_logger, log_errors
+
+# Set up logger
+logger = get_logger(__name__)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -57,14 +61,14 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Validate the inputs to the flow.
         This is the first step in the flow.
         """
-        print("Validating inputs...")
+        logger.info("Validating inputs...")
         
         # Check if the dataset exists
         if self.state.dataset_name not in SAMPLE_DATASETS:
-            print(f"Dataset '{self.state.dataset_name}' not found. Using default dataset.")
+            logger.warning(f"Dataset '{self.state.dataset_name}' not found. Using default dataset.")
             self.state.dataset_name = "customer_feedback"
         
-        print(f"Using dataset: {self.state.dataset_name}")
+        logger.info(f"Using dataset: {self.state.dataset_name}")
 
     @listen(validate_inputs)
     def analyze_data(self):
@@ -81,7 +85,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         dataset = SAMPLE_DATASETS[self.state.dataset_name]
         
         try:
-            print(f"Using CrewAI to analyze {dataset['name']}...")
+            logger.info(f"Using CrewAI to analyze {dataset['name']}...")
             
             # Create and run the crew
             crew_instance = FirstCrew()
@@ -107,16 +111,16 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
                     "insights": json_data.get("insights", []),
                     "recommendations": json_data.get("recommendations", [])
                 }
-                print("CrewAI analysis completed successfully.")
+                logger.info("CrewAI analysis completed successfully.")
                 return self.process_insights_in_parallel
             else:
-                print("No structured output available from the crew.")
+                logger.error("No structured output available from the crew.")
                 # Call the utility function directly instead of using a wrapper method
                 return handle_flow_error(self.state, self.state.output_format)
         except Exception as e:
-            print(f"Error during CrewAI analysis: {e}")
+            logger.error(f"Error during CrewAI analysis: {e}", exc_info=True)
             # Call the utility function directly instead of using a wrapper method
-            return handle_flow_error(self.state, self.state.output_format)
+            return handle_flow_error(self.state, self.state.output_format, error=e)
 
     @listen(analyze_data)
     def process_insights_in_parallel(self):
@@ -124,10 +128,15 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Process insights in parallel using Ray.
         This step takes the insights from the analysis and processes them in parallel.
         """
-        print("Processing insights in parallel...")
+        logger.info("Processing insights in parallel...")
         
         # Extract insights from the analysis results
         insights = self.state.analysis_results.get("insights", [])
+        
+        if not insights:
+            logger.warning("No insights to process. Using empty result set.")
+            self.state.parallel_processing_results = []
+            return
         
         try:
             # Process insights using the generalized function
@@ -139,12 +148,13 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             )
         except Exception as e:
             # If the generic processing function fails completely, create a minimal result
-            print(f"Processing failed completely: {e}. Creating minimal results.")
+            logger.error(f"Processing failed completely: {e}. Creating minimal results.", exc_info=True)
             self.state.parallel_processing_results = [
                 {
                     "insight": "Error processing insights.",
                     "priority": 10,
-                    "processed_by": "Error-Handler"
+                    "processed_by": "Error-Handler",
+                    "error": str(e)
                 }
             ]
         
@@ -155,8 +165,9 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             reverse=True
         )
         
-        print(f"Processed {len(self.state.parallel_processing_results)} insights.")
+        logger.info(f"Processed {len(self.state.parallel_processing_results)} insights.")
 
+    @log_errors(logger=logger, error_msg="Error processing individual insight")
     def process_insight(self, insight: str, index: int) -> Dict[str, Any]:
         """
         Process a single insight, generating a priority score.
@@ -171,16 +182,22 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Returns:
             A dictionary with the processed insight data
         """
+        logger.debug(f"Processing insight {index}: {insight[:50]}...")
+        
         # Generate a priority score based on the insight content
         # In a real application, this could use NLP or other techniques
         # to determine the importance of the insight
         priority = random.randint(1, 10)
         
-        return {
+        result = {
             "insight": insight,
             "priority": priority,
-            "processed_by": f"Worker-{index}"
+            "processed_by": f"Worker-{index}",
+            "processing_time": time.strftime("%Y-%m-%d %H:%M:%S")
         }
+        
+        logger.debug(f"Insight {index} assigned priority {priority}")
+        return result
 
     @listen(process_insights_in_parallel)
     def finalize_results(self):
@@ -188,7 +205,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Final step in the flow.
         This step aggregates the results from previous steps.
         """
-        print("Finalizing results...")
+        logger.info("Finalizing results...")
         
         # Combine the original analysis with the prioritized insights
         self.state.final_insights = {
@@ -199,7 +216,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        print("Flow completed successfully!")
+        logger.info("Flow completed successfully!")
         
         # Format the output based on the requested format
         return format_output(self.state.final_insights, self.state.output_format)
@@ -217,30 +234,46 @@ async def kickoff(inputs: dict = None):
     
     # Update state with inputs if provided
     if inputs and isinstance(inputs, dict):
+        logger.info(f"Initializing flow with inputs: {inputs}")
         for key, value in inputs.items():
             if hasattr(flow.state, key):
                 setattr(flow.state, key, value)
+            else:
+                logger.warning(f"Ignoring unknown input parameter: {key}")
     
-    # Run the flow
-    result = await flow.kickoff_async()
-    
-    # Return the result
-    return result
+    try:
+        # Run the flow
+        logger.info("Starting flow execution...")
+        result = await flow.kickoff_async()
+        logger.info("Flow execution completed successfully")
+        return result
+    except Exception as e:
+        logger.error(f"Error during flow execution: {e}", exc_info=True)
+        # Return a fallback response in case of error
+        return format_output({"error": str(e), "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}, "markdown")
+    finally:
+        # Shutdown Ray if needed
+        shutdown_ray(is_kodosumi)
 
 if __name__ == "__main__":
     """Main entry point for the flow when run directly."""
-    # Parse command line arguments
-    args = {}
-    for arg in sys.argv[1:]:
-        if "=" in arg:
-            key, value = arg.split("=", 1)
-            args[key] = value
-    
-    # Run the flow
-    result = asyncio.run(kickoff(args))
-    
-    # Print the result
-    print("\nFlow execution completed.")
-    
-    # Shutdown Ray if needed
-    shutdown_ray(is_kodosumi) 
+    try:
+        # Parse command line arguments
+        args = {}
+        for arg in sys.argv[1:]:
+            if "=" in arg:
+                key, value = arg.split("=", 1)
+                args[key] = value
+        
+        logger.info(f"Starting flow with command line arguments: {args}")
+        
+        # Run the flow
+        result = asyncio.run(kickoff(args))
+        
+        # Print the result
+        logger.info("Flow execution completed.")
+        print("\n" + result)
+    except Exception as e:
+        logger.error(f"Error in main execution: {e}", exc_info=True)
+        print(f"\nError: {e}")
+        sys.exit(1)

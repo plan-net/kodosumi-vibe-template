@@ -23,18 +23,14 @@ def mock_response():
             {
                 "title": "Test Result 1",
                 "url": "https://example.com/1",
-                "contents": {
-                    "text": "This is sample text content for test result 1.",
-                    "summary": "Summary of test result 1."
-                }
+                "text": "This is sample text content for test result 1.",
+                "summary": "Summary of test result 1."
             },
             {
                 "title": "Test Result 2",
                 "url": "https://example.com/2",
-                "contents": {
-                    "text": "This is sample text content for test result 2.",
-                    "summary": "Summary of test result 2."
-                }
+                "text": "This is sample text content for test result 2.",
+                "summary": "Summary of test result 2."
             }
         ]
     }
@@ -178,18 +174,4 @@ def test_timeout_exception_handling(mock_env, mock_requests):
         tool._search(query="test query", summary_query="test summary")
     
     # Should have been called twice (initial + 1 retry)
-    assert mock_requests.post.call_count == 2
-
-@pytest.mark.asyncio
-async def test_arun_method(mock_env, mock_requests, mock_response):
-    """Test the asynchronous _arun method."""
-    tool = ExaSearchTool()
-    formatted_results = await tool._arun(
-        query="test query",
-        summary_query="test summary query"
-    )
-    
-    # Check that it returns the same result as _run
-    assert "Search Results for 'test query':" in formatted_results
-    assert "[1] Test Result 1" in formatted_results
-    assert "Summary: Summary of test result 1." in formatted_results 
+    assert mock_requests.post.call_count == 2 

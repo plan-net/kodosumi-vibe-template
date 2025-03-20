@@ -31,7 +31,7 @@ from workflows.tools.exa_search import ExaSearchTool
 exa_search_tool = ExaSearchTool()
 
 # Use the tool directly
-results = exa_search_tool.run({"query": "latest AI advancements"})
+results = exa_search_tool.run("latest AI advancements")
 print(results)
 ```
 
@@ -46,16 +46,16 @@ exa_search_tool = ExaSearchTool(
 )
 
 # Search with additional parameters
-results = exa_search_tool.run({
-    "query": "climate change solutions",
-    "summary_query": "summarize the latest climate change solutions",
-    "num_results": 5,
-    "include_domains": ["nature.com", "science.org"],
-    "exclude_domains": ["wikipedia.org"],
-    "search_type": "keyword",
-    "max_chars": 1000,
-    "livecrawl": "always"
-})
+results = exa_search_tool.run(
+    query="climate change solutions",
+    summary_query="summarize the latest climate change solutions",
+    num_results=5,
+    include_domains=["nature.com", "science.org"],
+    exclude_domains=["wikipedia.org"],
+    search_type="keyword",
+    max_chars=1000,
+    livecrawl="always"
+)
 ```
 
 ## Using with CrewAI
@@ -79,22 +79,27 @@ researcher = Agent(
 )
 ```
 
-## Examples
+## Command Line Example
 
-This package includes two example scripts:
-
-1. `standalone.py` - Demonstrates using the ExaSearchTool directly without CrewAI
-2. `crewai_example.py` - Shows how to use the ExaSearchTool in a CrewAI workflow
-
-To run the examples:
+This package includes a command-line example script that demonstrates how to use the ExaSearchTool:
 
 ```bash
-# Run the standalone example
-python -m workflows.tools.exa_search.standalone
+# Basic search
+python workflows/tools/exa_search/example.py "latest AI research"
 
-# Run the CrewAI example
-python -m workflows.tools.exa_search.crewai_example
+# Advanced search with parameters
+python workflows/tools/exa_search/example.py "climate change solutions" \
+    --summary "summarize recent climate solutions" \
+    --results 3 \
+    --include nature.com science.org \
+    --exclude wikipedia.org \
+    --type keyword \
+    --chars 1000 \
+    --livecrawl always \
+    --debug
 ```
+
+The `--debug` flag will print the raw JSON response from the API for troubleshooting.
 
 ## API Reference
 
@@ -104,18 +109,37 @@ The main tool class for performing web searches using Exa.ai.
 
 **Parameters:**
 
-- `api_key` (Optional): Custom API key (defaults to `EXA_API_KEY` environment variable)
-- `timeout` (int): Request timeout in seconds (default: 15)
+- `api_key` (Optional[str]): Custom API key (defaults to `EXA_API_KEY` environment variable)
+- `timeout` (Union[int, float]): Request timeout in seconds (default: 15)
 - `max_retries` (int): Maximum retries for failed requests (default: 2)
-- `retry_delay` (int): Delay between retries in seconds (default: 2)
+- `retry_delay` (Union[int, float]): Delay between retries in seconds (default: 2)
 
-**Input Parameters (for `run` method):**
+**Input Parameters (for `_run` method):**
 
 - `query` (str): Search query to run against Exa.ai
-- `summary_query` (str, optional): Query to use for generating summaries of results
+- `summary_query` (Optional[str]): Query to use for generating summaries of results
 - `num_results` (int): Number of search results to return (default: 5)
-- `include_domains` (List[str], optional): Filter results to these domains
-- `exclude_domains` (List[str], optional): Exclude results from these domains
+- `include_domains` (Optional[List[str]]): Filter results to these domains
+- `exclude_domains` (Optional[List[str]]): Exclude results from these domains
 - `search_type` (str): Type of search to perform (default: "keyword")
 - `max_chars` (int): Maximum characters to return for each result's content (default: 500)
-- `livecrawl` (str, optional): Livecrawl setting ("always", "fallback", or "never") 
+- `livecrawl` (Optional[str]): Livecrawl setting ("always", "fallback", or "never")
+
+### ExaSearchInput
+
+Pydantic model that defines the input schema for the ExaSearchTool.
+
+## Testing
+
+Run the tests with:
+
+```bash
+# Run all tests
+pytest tests/tools/exa_search/test_tool.py
+
+# Run tests with verbose output
+pytest tests/tools/exa_search/test_tool.py -v
+
+# Run tests with coverage
+pytest tests/tools/exa_search/test_tool.py --cov=workflows.tools.exa_search
+``` 

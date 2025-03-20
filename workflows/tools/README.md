@@ -37,7 +37,7 @@ from workflows.tools.exa_search import ExaSearchTool
 exa_search_tool = ExaSearchTool()
 
 # Use the tool directly
-results = exa_search_tool.run({"query": "latest AI advancements"})
+results = exa_search_tool.run("latest AI advancements")
 print(results)
 ```
 
@@ -52,16 +52,16 @@ exa_search_tool = ExaSearchTool(
 )
 
 # Search with additional parameters
-results = exa_search_tool.run({
-    "query": "climate change solutions",
-    "summary_query": "summarize the latest climate change solutions",
-    "num_results": 5,
-    "include_domains": ["nature.com", "science.org"],
-    "exclude_domains": ["wikipedia.org"],
-    "search_type": "keyword",
-    "max_chars": 1000,
-    "livecrawl": "always"
-})
+results = exa_search_tool.run(
+    query="climate change solutions",
+    summary_query="summarize the latest climate change solutions",
+    num_results=5,
+    include_domains=["nature.com", "science.org"],
+    exclude_domains=["wikipedia.org"],
+    search_type="keyword",
+    max_chars=1000,
+    livecrawl="always"
+)
 ```
 
 #### Using with CrewAI
@@ -85,7 +85,7 @@ researcher = Agent(
 )
 ```
 
-See `exa_example.py` for a complete example of using the `ExaSearchTool` in a CrewAI workflow.
+See the `exa_search` directory for more detailed documentation and examples.
 
 ### ExampleTool
 
@@ -95,9 +95,9 @@ A simple example tool demonstrating the basic structure of a CrewAI tool.
 
 To create a new tool:
 
-1. Create a new Python file in this directory
-2. Define your tool class extending `BaseTool` from LangChain
-3. Implement the required methods: `_run` and `_arun`
+1. Create a new Python file in this directory or create a dedicated subdirectory for more complex tools
+2. Define your tool class extending `BaseTool` from `crewai.tools`
+3. Implement the required methods: `_run` for synchronous execution
 4. Import and add your tool to `__init__.py`
 
 See `example_tool.py` for a simple example of creating a custom tool. 

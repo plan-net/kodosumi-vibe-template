@@ -7,10 +7,11 @@ This module provides the ExaSearchTool class for searching the web using the Exa
 import os
 import json
 import time
-from typing import Optional, Type, List, Dict, Any
+from typing import Optional, Type, List, Dict, Any, Union
 import requests
+from requests.exceptions import RequestException, Timeout
 from pydantic import BaseModel, Field
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -38,13 +39,24 @@ class ExaSearchTool(BaseTool):
     description: str = "Search the web for current information using Exa.ai API"
     args_schema: Type[BaseModel] = ExaSearchInput
     
-    # Configuration parameters
-    api_key: Optional[str] = None
-    timeout: int = 15
-    max_retries: int = 2
-    retry_delay: int = 2
+    # Define fields as model attributes
+    api_key: Optional[str] = Field(None, description="API key for Exa.ai")
+    timeout: Union[int, float] = Field(15, description="Request timeout in seconds")
+    max_retries: int = Field(2, description="Maximum retries for failed requests") 
+    retry_delay: Union[int, float] = Field(2, description="Delay between retries in seconds")
     
-    def __init__(self, **kwargs):
+    class Config:
+        """Pydantic model configuration."""
+        arbitrary_types_allowed = True
+        extra = "allow"
+    
+    def __init__(
+        self, 
+        api_key: Optional[str] = None, 
+        timeout: Union[int, float] = 15, 
+        max_retries: int = 2, 
+        retry_delay: Union[int, float] = 2
+    ):
         """
         Initialize the ExaSearchTool.
         
@@ -54,19 +66,19 @@ class ExaSearchTool(BaseTool):
             max_retries: Maximum number of retries for failed requests
             retry_delay: Delay between retries in seconds
         """
-        # Extract custom params from kwargs before passing to super().__init__
-        self.api_key = kwargs.pop('api_key', os.getenv("EXA_API_KEY"))
-        self.timeout = kwargs.pop('timeout', 15)
-        self.max_retries = kwargs.pop('max_retries', 2)
-        self.retry_delay = kwargs.pop('retry_delay', 2)
+        # Initialize with Pydantic model fields
+        super().__init__(
+            api_key=api_key or os.getenv("EXA_API_KEY"),
+            timeout=timeout,
+            max_retries=max_retries,
+            retry_delay=retry_delay
+        )
         
         if not self.api_key:
             raise ValueError(
                 "EXA_API_KEY environment variable not set. "
                 "Please set it in your .env file or pass it directly to the constructor."
             )
-            
-        super().__init__(**kwargs)
     
     def _run(
         self, 
@@ -113,17 +125,17 @@ class ExaSearchTool(BaseTool):
             title = result.get("title", "No Title")
             url = result.get("url", "No URL")
             
-            content = "No content available"
-            if "text" in result.get("contents", {}):
-                content = result["contents"]["text"]
-                # Truncate content if needed
-                if len(content) > max_chars:
-                    content = content[:max_chars] + "..."
+            # Extract text content directly from the result
+            content = result.get("text", "No content available")
+            
+            # Truncate content if needed
+            if content and len(content) > max_chars:
+                content = content[:max_chars] + "..."
             
             # Add summary if available
             summary = ""
-            if "summary" in result.get("contents", {}):
-                summary = f"\nSummary: {result['contents']['summary']}"
+            if "summary" in result:
+                summary = f"\nSummary: {result['summary']}"
             
             formatted_results.append(f"[{i}] {title}\nURL: {url}\nContent: {content}{summary}\n")
         
@@ -134,33 +146,6 @@ class ExaSearchTool(BaseTool):
             ])
         else:
             return f"No results found for '{query}'"
-    
-    async def _arun(
-        self, 
-        query: str,
-        summary_query: Optional[str] = None,
-        num_results: int = 5,
-        include_domains: Optional[List[str]] = None,
-        exclude_domains: Optional[List[str]] = None,
-        search_type: str = "keyword",
-        max_chars: int = 500,
-        livecrawl: Optional[str] = None
-    ) -> str:
-        """
-        Run the tool asynchronously.
-        
-        For now, this just calls the synchronous version.
-        """
-        return self._run(
-            query=query,
-            summary_query=summary_query,
-            num_results=num_results,
-            include_domains=include_domains,
-            exclude_domains=exclude_domains,
-            search_type=search_type,
-            max_chars=max_chars,
-            livecrawl=livecrawl
-        )
     
     def _search(
         self, 
@@ -235,13 +220,13 @@ class ExaSearchTool(BaseTool):
                 )
                 response.raise_for_status()
                 return response.json()
-            except requests.exceptions.Timeout:
+            except Timeout:
                 if attempt < self.max_retries:
                     print(f"Request timed out. Retry {attempt+1}/{self.max_retries}...")
                     time.sleep(self.retry_delay)
                 else:
                     raise ValueError(f"Exa search request timed out after {self.max_retries + 1} attempts")
-            except requests.exceptions.RequestException as e:
+            except RequestException as e:
                 if attempt < self.max_retries:
                     print(f"Request failed with error: {str(e)}. Retry {attempt+1}/{self.max_retries}...")
                     time.sleep(self.retry_delay)

@@ -16,7 +16,7 @@ from crewai.flow import Flow, listen, start
 
 # Import your crew classes here
 from workflows.example.crews.first_crew.first_crew import FirstCrew
-from workflows.example.data import SAMPLE_DATASETS
+from workflows.common.data import SAMPLE_DATASETS
 from workflows.common.utils import (
     RAY_TASK_NUM_CPUS, RAY_TASK_MAX_RETRIES, RAY_TASK_TIMEOUT, 
     RAY_BATCH_SIZE, initialize_ray, shutdown_ray, test_ray_connectivity

@@ -5,6 +5,7 @@
 - Install Kodosumi: `pip install git+https://github.com/masumi-network/kodosumi.git@dev`
 - Run all tests: `pytest`
 - Run specific test: `pytest tests/path/to/test_file.py::TestClass::test_function`
+- Run tests by pattern: `pytest -k "pattern"`
 - Test with coverage: `pytest --cov=workflows`
 - Lint code: `ruff check .`
 - Format code: `black . && isort .`
@@ -21,9 +22,14 @@
 - Use descriptive function and variable names
 - Group related tests in classes with `Test` prefix
 - Mock LLM calls in tests to avoid API costs
+- Use proper error handling with try/except blocks
 
 ## Workflow Structure
 - Mirror project structure in test directory
 - New workflows require tests, HTML templates, and serve.py setup
 - Update config.yaml when adding new workflows
 - Use Ray for parallel processing when appropriate
+- Follow test structure: unit tests, integration tests, flow tests, and API tests
+- When fixing bugs, always adjust tests if necessary
+- Implement crews with the @CrewBase decorator and appropriate methods
+- Load agent and task configurations from YAML files in the config/ directory

@@ -174,6 +174,53 @@ finally:
     shutdown_ray(is_kodosumi)
 ```
 
+### Ray Example Scripts
+
+The repository includes example scripts in `examples/ray/` that demonstrate key Ray patterns used in the Kodosumi framework:
+
+#### Basic Remote Functions
+
+`ray_test.py` demonstrates the fundamentals of Ray:
+- Initializing Ray
+- Defining remote functions with `@ray.remote`
+- Submitting tasks with `.remote()`
+- Retrieving results with `ray.get()`
+
+This pattern is used for simple, stateless task offloading.
+
+#### Parallel Processing
+
+`ray_parallel_test.py` demonstrates parallel processing of multiple tasks:
+- Submitting multiple tasks concurrently
+- Aggregating results from parallel execution
+- Organizing results by priority
+
+This is the pattern used in the `process_insights_in_parallel` method in workflows.
+
+#### Actor Model
+
+`ray_actor_model.py` demonstrates stateful processing with Ray Actors:
+- Creating actor instances with specializations
+- Maintaining state across method calls
+- Routing tasks to appropriate actors
+- Tracking processing history
+
+This pattern is useful for stateful agents and workflow components.
+
+#### Running Examples
+
+```bash
+# Run all examples
+python examples/ray/run_all_examples.py
+
+# Run specific examples
+python examples/ray/run_all_examples.py basic     # Just the basic example
+python examples/ray/run_all_examples.py parallel  # Parallel processing
+python examples/ray/run_all_examples.py actor     # Actor model
+```
+
+These examples serve as both learning resources and documentation of recommended Ray patterns.
+
 ## Web Interface
 
 Create HTML templates for your workflow:

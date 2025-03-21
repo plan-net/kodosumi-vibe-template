@@ -49,6 +49,31 @@ A template for building AI workflows with CrewAI and Kodosumi.
 - 🚀 Easy deployment with Kodosumi
 - 📊 Web interface for workflow management
 - 🔧 Extensible and customizable
+- 📈 Distributed computing with Ray
+
+## Ray Examples
+
+The repository includes example scripts that demonstrate how to use Ray for distributed computing in the Kodosumi framework:
+
+### Available Examples
+
+- **Basic Remote Functions**: Simple Ray tasks and remote execution
+- **Parallel Processing**: The pattern used in workflow's `process_insights_in_parallel` method
+- **Actor Model**: Stateful processing with specialized worker instances
+
+### Running Examples
+
+```bash
+# Run all examples
+python examples/ray/run_all_examples.py
+
+# Run specific examples
+python examples/ray/run_all_examples.py basic     # Just basic remote functions
+python examples/ray/run_all_examples.py parallel  # Parallel processing
+python examples/ray/run_all_examples.py actor     # Actor model
+```
+
+These examples serve as learning resources and documentation of recommended Ray patterns. For more details, see the [examples/ray/README.md](examples/ray/README.md) file.
 
 ## Recommended MCP Servers
 
@@ -104,6 +129,7 @@ This template includes specialized Cursor rules that provide AI-assisted develop
 ### Reference
 - [CrewAI Flow Components](docs/reference/crewai_flow.md)
 - [Common Utilities](docs/reference/common_utilities.md)
+- [Ray Documentation](docs/ray/overview.md)
 
 ## Project Structure
 

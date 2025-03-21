@@ -2,15 +2,18 @@
 
 import json
 import os
-import asyncio
 import ray
 import sys
 import time
 import random
+import uuid
+import re
 from typing import List, Dict, Any, Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from kodosumi.dtypes import Markdown
+from kodosumi.tracer import markdown
 
 from crewai.flow import Flow, listen, start
 
@@ -18,15 +21,10 @@ from crewai.flow import Flow, listen, start
 from workflows.example.crews.first_crew.first_crew import FirstCrew
 from workflows.common.data import SAMPLE_DATASETS
 from workflows.common.utils import (
-    RAY_TASK_NUM_CPUS, RAY_TASK_MAX_RETRIES, RAY_TASK_TIMEOUT, 
-    RAY_BATCH_SIZE, initialize_ray, shutdown_ray, test_ray_connectivity
+    initialize_ray, shutdown_ray
 )
-from workflows.common.formatters import format_output, extract_structured_data
-from workflows.common.processors import (
-    create_fallback_response, handle_flow_error,
-    process_with_ray_or_locally
-)
-from workflows.common.logging_utils import get_logger, log_errors
+from workflows.common.formatters import format_output
+from workflows.common.logging_utils import get_logger
 
 # Set up logger
 logger = get_logger(__name__)
@@ -38,6 +36,30 @@ load_dotenv()
 # Kodosumi will handle Ray initialization for us
 is_kodosumi = os.environ.get("KODOSUMI_ENVIRONMENT") == "true"
 
+# Define the Ray remote function
+@ray.remote
+def process_insight(insight):
+    """
+    Ray remote function to process a single insight.
+    Args:
+        insight: The insight text to process
+    Returns:
+        A dictionary with the processed insight data
+    """
+    # Generate a priority score based on the insight content
+    # In a real application, this could use NLP or other techniques
+    # to determine the importance of the insight
+    priority = random.randint(1, 10)
+    
+    result = {
+        "insight": insight,
+        "priority": priority,
+        "processed_by": f"Ray-Worker-{uuid.uuid4().hex[:8]}",
+        "processing_time": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    return result
+
 class CrewAIFlowState(BaseModel):
     """
     Define your flow state here.
@@ -46,6 +68,7 @@ class CrewAIFlowState(BaseModel):
     dataset_name: str = "customer_feedback"  # Default dataset
     output_format: str = "markdown"   # Default output format (markdown or json)
     analysis_results: Dict[str, Any] = {}
+    analysis_error: Optional[str] = None
     parallel_processing_results: List[Dict[str, Any]] = []
     final_insights: Dict[str, Any] = {}
 
@@ -61,6 +84,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Validate the inputs to the flow.
         This is the first step in the flow.
         """
+        markdown("**Validating inputs...**")
         logger.info("Validating inputs...")
         
         # Check if the dataset exists
@@ -69,135 +93,147 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
             self.state.dataset_name = "customer_feedback"
         
         logger.info(f"Using dataset: {self.state.dataset_name}")
+        markdown(f"**Using dataset: {self.state.dataset_name}**")
 
     @listen(validate_inputs)
     def analyze_data(self):
         """
-        Analyze the selected dataset using CrewAI.
-        
-        This step creates a crew of AI agents to analyze the data and extract insights.
-        The crew is defined in the FirstCrew class and is responsible for:
-        1. Analyzing the dataset to identify patterns and trends
-        2. Generating business insights and recommendations
-        
-        The structured output from the crew is stored in the flow state for further processing.
+        Analyze the input data using CrewAI.
         """
-        dataset = SAMPLE_DATASETS[self.state.dataset_name]
+        markdown(f"**Analyzing {self.state.dataset_name} dataset using CrewAI...**")
+        logger.info(f"Using CrewAI to analyze {self.state.dataset_name}...")
         
         try:
-            logger.info(f"Using CrewAI to analyze {dataset['name']}...")
+            # Get dataset from SAMPLE_DATASETS
+            dataset = SAMPLE_DATASETS.get(self.state.dataset_name)
+            if not dataset:
+                raise ValueError(f"Dataset {self.state.dataset_name} not found in SAMPLE_DATASETS")
             
-            # Create and run the crew
-            crew_instance = FirstCrew()
-            crew = crew_instance.crew()
-            
-            # Prepare the task inputs with dataset information
+            # Prepare inputs for the crew
             task_inputs = {
                 "dataset_name": dataset["name"],
                 "dataset_description": dataset["description"],
                 "sample_data": json.dumps(dataset["sample"], indent=2)
             }
             
-            # Run the crew and get the result
-            crew_result = crew.kickoff(inputs=task_inputs)
+            # Create and run the crew
+            markdown("**Initializing crew execution...**")
+            crew_instance = FirstCrew()
+            crew = crew_instance.crew()
+            crew.kickoff(inputs=task_inputs)
             
-            # Extract structured data from the crew result
-            json_data = extract_structured_data(crew_result)
+            # Extract insights from the last task output
+            if crew.tasks and len(crew.tasks) > 0:
+                last_task = crew.tasks[-1]
+                if last_task.output:
+                    # Try to extract insights using the most reliable methods
+                    insights_dict = self._extract_insights_from_task_output(last_task.output)
+                    if insights_dict:
+                        markdown("**Successfully extracted insights from crew output**")
+                        self.state.analysis_results = insights_dict
+                        return self.process_insights_in_parallel
             
-            if json_data:
-                # Store the structured output in the state
-                self.state.analysis_results = {
-                    "summary": json_data.get("summary", "No summary available"),
-                    "insights": json_data.get("insights", []),
-                    "recommendations": json_data.get("recommendations", [])
-                }
-                logger.info("CrewAI analysis completed successfully.")
-                return self.process_insights_in_parallel
-            else:
-                logger.error("No structured output available from the crew.")
-                # Call the utility function directly instead of using a wrapper method
-                return handle_flow_error(self.state, self.state.output_format)
+            # If we reach here, create fallback results
+            markdown("**Failed to extract insights from crew output**")
+            self.state.analysis_error = f"Unable to extract insights for {self.state.dataset_name} dataset."
+            self.state.analysis_results = {
+                "summary": f"Analysis of {self.state.dataset_name} was completed, but insights extraction failed.",
+                "insights": [f"No insights could be properly extracted for {self.state.dataset_name}."],
+                "recommendations": ["Try with a different dataset or check the task output format."]
+            }
+            
         except Exception as e:
-            logger.error(f"Error during CrewAI analysis: {e}", exc_info=True)
-            # Call the utility function directly instead of using a wrapper method
-            return handle_flow_error(self.state, self.state.output_format, error=e)
+            logger.error(f"Error analyzing data: {str(e)}")
+            markdown(f"**Error analyzing data: {str(e)}**")
+            self.state.analysis_error = str(e)
+            self.state.analysis_results = {
+                "summary": f"Analysis of {self.state.dataset_name} failed due to an error.",
+                "insights": [f"Error: {str(e)}"],
+                "recommendations": ["Try again later."]
+            }
+        
+        return self.process_insights_in_parallel
+
+    def _extract_insights_from_task_output(self, task_output):
+        """
+        Helper method to extract insights from task output using various methods.
+        Returns a dictionary with the insights or None if extraction fails.
+        """
+        # Method 1: Extract from raw output (most reliable)
+        if hasattr(task_output, 'raw'):
+            try:
+                match = re.search(r'\{[\s\S]*\}', task_output.raw)
+                if match:
+                    insights_dict = json.loads(match.group(0))
+                    if isinstance(insights_dict, dict) and 'insights' in insights_dict:
+                        return insights_dict
+            except Exception:
+                pass
+        
+        # Method 2: Try direct attribute access
+        if hasattr(task_output, 'summary') and hasattr(task_output, 'insights'):
+            return {
+                "summary": task_output.summary,
+                "insights": task_output.insights,
+                "recommendations": getattr(task_output, 'recommendations', [])
+            }
+        
+        # Method 3: Try using __dict__
+        if hasattr(task_output, '__dict__'):
+            insights_dict = task_output.__dict__
+            if isinstance(insights_dict, dict) and 'insights' in insights_dict:
+                return insights_dict
+        
+        return None
 
     @listen(analyze_data)
     def process_insights_in_parallel(self):
-        """
-        Process insights in parallel using Ray.
-        This step takes the insights from the analysis and processes them in parallel.
-        """
+        """Process insights in parallel."""
+        markdown("**Processing insights in parallel using Ray...**")
         logger.info("Processing insights in parallel...")
-        
-        # Extract insights from the analysis results
-        insights = self.state.analysis_results.get("insights", [])
-        
-        if not insights:
+
+        try:
+            if not hasattr(self.state, 'analysis_results') or not self.state.analysis_results:
+                logger.warning("No analysis results found in state")
+                markdown("**No analysis results found to process**")
+                self.state.parallel_processing_results = []
+                return self.finalize_results
+
+            # Extract insights from the analysis results
+            logger.info(f"Analysis results type: {type(self.state.analysis_results)}")
+            
+            if isinstance(self.state.analysis_results, dict) and 'insights' in self.state.analysis_results:
+                logger.info(f"Analysis results keys: {self.state.analysis_results.keys()}")
+                insights = self.state.analysis_results.get('insights', [])
+                
+                if insights:
+                    count = len(insights)
+                    logger.info(f"Processing {count} insights")
+                    markdown(f"**Processing {count} insights in parallel...**")
+                    
+                    # Process each insight in parallel using Ray
+                    refs = [process_insight.remote(insight) for insight in insights]
+                    insights_results = ray.get(refs)
+                    self.state.parallel_processing_results = insights_results
+                    
+                    logger.info(f"Processed {len(insights_results)} insights")
+                    markdown(f"**Successfully processed {len(insights_results)} insights**")
+                    return self.finalize_results
+                else:
+                    logger.warning("Insights list is empty")
+                    markdown("**No insights found to process**")
+            else:
+                logger.warning(f"Analysis results does not contain 'insights' key")
+                markdown("**Analysis results missing 'insights' key**")
+            
             logger.warning("No insights to process. Using empty result set.")
             self.state.parallel_processing_results = []
-            return
-        
-        try:
-            # Process insights using the generalized function
-            # This will automatically use Ray if available, or fall back to local processing
-            self.state.parallel_processing_results = process_with_ray_or_locally(
-                items=insights,
-                process_func=self.process_insight,
-                batch_size=RAY_BATCH_SIZE
-            )
+            return self.finalize_results
         except Exception as e:
-            # If the generic processing function fails completely, create a minimal result
-            logger.error(f"Processing failed completely: {e}. Creating minimal results.", exc_info=True)
-            self.state.parallel_processing_results = [
-                {
-                    "insight": "Error processing insights.",
-                    "priority": 10,
-                    "processed_by": "Error-Handler",
-                    "error": str(e)
-                }
-            ]
-        
-        # Sort results by priority (highest first)
-        self.state.parallel_processing_results = sorted(
-            self.state.parallel_processing_results, 
-            key=lambda x: x["priority"], 
-            reverse=True
-        )
-        
-        logger.info(f"Processed {len(self.state.parallel_processing_results)} insights.")
-
-    @log_errors(logger=logger, error_msg="Error processing individual insight")
-    def process_insight(self, insight: str, index: int) -> Dict[str, Any]:
-        """
-        Process a single insight, generating a priority score.
-        
-        This function is used with process_with_ray_or_locally to process
-        insights either locally or with Ray, depending on availability.
-        
-        Args:
-            insight: The insight text to process
-            index: The index of the insight in the original list
-            
-        Returns:
-            A dictionary with the processed insight data
-        """
-        logger.debug(f"Processing insight {index}: {insight[:50]}...")
-        
-        # Generate a priority score based on the insight content
-        # In a real application, this could use NLP or other techniques
-        # to determine the importance of the insight
-        priority = random.randint(1, 10)
-        
-        result = {
-            "insight": insight,
-            "priority": priority,
-            "processed_by": f"Worker-{index}",
-            "processing_time": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
-        
-        logger.debug(f"Insight {index} assigned priority {priority}")
-        return result
+            logger.error(f"Error processing insights: {str(e)}")
+            markdown(f"**Error processing insights: {str(e)}**")
+            self.state.parallel_processing_results = [{"error": f"Error processing insights: {str(e)}"}]
+            return self.finalize_results
 
     @listen(process_insights_in_parallel)
     def finalize_results(self):
@@ -205,6 +241,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         Final step in the flow.
         This step aggregates the results from previous steps.
         """
+        markdown("**Finalizing results and generating report...**")
         logger.info("Finalizing results...")
         
         # Combine the original analysis with the prioritized insights
@@ -217,11 +254,12 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         }
         
         logger.info("Flow completed successfully!")
+        markdown("**Flow execution completed successfully**")
         
         # Format the output based on the requested format
         return format_output(self.state.final_insights, self.state.output_format)
 
-async def kickoff(inputs: dict = None):
+def kickoff(inputs: dict = None):
     """
     Kickoff function for the flow.
     This is the entry point for the flow when called from Kodosumi.
@@ -229,31 +267,47 @@ async def kickoff(inputs: dict = None):
     # Initialize Ray if needed
     initialize_ray(is_kodosumi)
     
-    # Create the flow
-    flow = CrewAIFlow()
-    
-    # Update state with inputs if provided
-    if inputs and isinstance(inputs, dict):
-        logger.info(f"Initializing flow with inputs: {inputs}")
-        for key, value in inputs.items():
-            if hasattr(flow.state, key):
-                setattr(flow.state, key, value)
-            else:
-                logger.warning(f"Ignoring unknown input parameter: {key}")
-    
     try:
+        # Create the flow
+        flow = CrewAIFlow()
+        
+        # Update state with inputs if provided
+        if inputs and isinstance(inputs, dict):
+            logger.info(f"Initializing flow with inputs: {inputs}")
+            for key, value in inputs.items():
+                if hasattr(flow.state, key):
+                    setattr(flow.state, key, value)
+                else:
+                    logger.warning(f"Ignoring unknown input parameter: {key}")
+        
         # Run the flow
         logger.info("Starting flow execution...")
-        result = await flow.kickoff_async()
+        markdown("**Starting CrewAI Flow execution...**")
+        result = flow.kickoff()
         logger.info("Flow execution completed successfully")
-        return result
+        
+        return Markdown(body=result)
     except Exception as e:
         logger.error(f"Error during flow execution: {e}", exc_info=True)
         # Return a fallback response in case of error
-        return format_output({"error": str(e), "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}, "markdown")
+        error_message = format_output({"error": str(e), "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}, "markdown")
+        return Markdown(body=error_message)
     finally:
         # Shutdown Ray if needed
         shutdown_ray(is_kodosumi)
+
+# Add metadata to the kickoff function
+kickoff.__brief__ = {
+    "summary": "Customer Insights Generator",
+    "description": "Analyzes customer feedback data using CrewAI and generates prioritized insights with recommendations.",
+    "author": "Kodosumi AI Team",
+    "organization": "Kodosumi"
+}
+
+def plot():
+    """Generate and display a flow diagram for the CrewAI Flow."""
+    flow = CrewAIFlow()
+    flow.plot()
 
 if __name__ == "__main__":
     """Main entry point for the flow when run directly."""
@@ -268,11 +322,14 @@ if __name__ == "__main__":
         logger.info(f"Starting flow with command line arguments: {args}")
         
         # Run the flow
-        result = asyncio.run(kickoff(args))
+        result = kickoff(args)
         
-        # Print the result
+        # Print the result (extract body from Markdown object if needed)
         logger.info("Flow execution completed.")
-        print("\n" + result)
+        if hasattr(result, 'body'):
+            print("\n" + result.body)
+        else:
+            print("\n" + str(result))
     except Exception as e:
         logger.error(f"Error in main execution: {e}", exc_info=True)
         print(f"\nError: {e}")

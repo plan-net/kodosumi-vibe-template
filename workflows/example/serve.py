@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from ray.serve import deployment, ingress
@@ -12,6 +13,10 @@ app = ServeAPI()
 
 templates = Jinja2Templates(
     directory=Path(__file__).parent.joinpath("templates"))
+
+app.mount("/static", StaticFiles(
+    directory=Path(__file__).parent.joinpath("static")), name="static")
+ 
 
 # Available datasets for the dropdown
 AVAILABLE_DATASETS = {

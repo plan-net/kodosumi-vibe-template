@@ -81,8 +81,10 @@ applications:
 
 4. **Start Kodosumi Server**
    ```bash
-   python -m kodosumi.cli serve
+   python -m kodosumi.cli serve --register http://localhost:8001/-/routes
    ```
+
+   The `--register` parameter is required to properly connect the Kodosumi web interface with your Ray Serve application routes.
 
 ## Accessing Your Flow
 

@@ -215,7 +215,7 @@ This guide helps you diagnose and resolve common issues when working with the Ko
    ray start --head
    python -m kodosumi.cli spool
    serve deploy config.yaml
-   python -m kodosumi.cli serve
+   python -m kodosumi.cli serve --register http://localhost:8001/-/routes
    ```
 
 ### Configuration Errors

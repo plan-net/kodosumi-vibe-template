@@ -182,7 +182,7 @@ Follow the structure of the example workflow in `workflows/example/` for best pr
    ```bash
    python -m kodosumi.cli spool
    serve deploy config.yaml
-   python -m kodosumi.cli serve
+   python -m kodosumi.cli serve --register http://localhost:8001/-/routes
    ```
 
 See the [Deployment Guide](docs/deployment.md) for more details.

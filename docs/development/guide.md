@@ -284,7 +284,7 @@ ray start --head --dashboard-host=0.0.0.0
    # Start Kodosumi services
    python -m kodosumi.cli spool
    serve deploy config.yaml
-   python -m kodosumi.cli serve
+   python -m kodosumi.cli serve --register http://localhost:8001/-/routes
 
    # Access at http://localhost:3370/my_workflow
    ```

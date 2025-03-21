@@ -29,6 +29,11 @@ applications:
     - langchain-openai>=0.0.2
     - langchain-community>=0.0.10
     - git+https://github.com/masumi-network/kodosumi.git@dev
+    - advanced-alchemy
+    - aiosqlite
+    - ansi2html
+    - bs4
+    - markdown
 - name: hypothesis_generator
   route_prefix: /hypothesis_generator
   import_path: workflows.hypothesis_generator.serve:fast_app
@@ -44,4 +49,9 @@ applications:
     - langchain>=0.0.267
     - langchain-openai>=0.0.2
     - langchain-community>=0.0.10
-    - git+https://github.com/masumi-network/kodosumi.git@dev 
+    - git+https://github.com/masumi-network/kodosumi.git@dev
+    - advanced-alchemy
+    - aiosqlite
+    - ansi2html
+    - bs4
+    - markdown

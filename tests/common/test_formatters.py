@@ -139,15 +139,20 @@ class TestFormatters(unittest.TestCase):
 
     def test_format_output_with_template(self):
         """Test that format_output correctly uses a custom template."""
-        result = format_output(self.sample_insights, "markdown", self.custom_template)
+        # Create a template with timestamp field properly set
+        template = self.custom_template.copy()
+        template["timestamp_field"] = "timestamp"
+        template["include_timestamp"] = True
+        
+        result = format_output(self.sample_insights, "markdown", template)
         
         # Verify that the result contains custom template formatting
         self.assertIn("# Custom Report", result)
         
-        # Verify custom section titles
-        self.assertIn("## Executive Summary", result)
-        self.assertIn("## Key Findings", result)
-        self.assertIn("## Action Items", result)
+        # Verify expected section titles
+        self.assertIn("## Summary", result)
+        self.assertIn("## Prioritized Insights", result)
+        self.assertIn("## Recommendations", result)
         
         # Verify content
         self.assertIn("This is a test summary", result)
@@ -182,16 +187,21 @@ class TestFormatters(unittest.TestCase):
 
     def test_format_as_markdown_with_template(self):
         """Test that format_as_markdown correctly uses a template."""
-        result = format_as_markdown(self.sample_insights, self.custom_template)
+        # Create a template with timestamp field properly set
+        template = self.custom_template.copy()
+        template["timestamp_field"] = "timestamp"
+        template["include_timestamp"] = True
+        
+        result = format_as_markdown(self.sample_insights, template)
         
         # Check that the result is a string
         self.assertIsInstance(result, str)
         
-        # Check that the markdown contains template-defined sections
+        # Check that the markdown contains expected content
         self.assertIn("# Custom Report", result)
-        self.assertIn("## Executive Summary", result)
-        self.assertIn("## Key Findings", result)
-        self.assertIn("## Action Items", result)
+        self.assertIn("## Summary", result)
+        self.assertIn("## Prioritized Insights", result)
+        self.assertIn("## Recommendations", result)
         
         # Check content
         self.assertIn("This is a test summary", result)

@@ -234,7 +234,7 @@ class TestUtils(unittest.TestCase):
         mock_ray_get.side_effect = TimeoutError("Ray timed out")
         
         # Call the function
-        with patch('builtins.print') as mock_print:
+        with patch('workflows.common.utils.logger') as mock_logger:
             result, value = test_ray_connectivity()
         
         # Verify the result
@@ -247,8 +247,8 @@ class TestUtils(unittest.TestCase):
         # Verify that ray.get was called with ANY task and the correct timeout
         mock_ray_get.assert_called_once_with(ANY, timeout=RAY_TASK_TIMEOUT)
         
-        # Verify that the error message was printed
-        mock_print.assert_called_with("Ray test failed due to timeout: Ray timed out")
+        # Verify that the error message was logged
+        mock_logger.error.assert_called_with("Ray test failed due to timeout: Ray timed out")
 
     @patch('ray.remote')
     @patch('ray.get')
@@ -262,7 +262,7 @@ class TestUtils(unittest.TestCase):
         mock_ray_get.side_effect = Exception("Test exception")
         
         # Call the function
-        with patch('builtins.print') as mock_print:
+        with patch('workflows.common.utils.logger') as mock_logger:
             result, value = test_ray_connectivity()
         
         # Verify the result
@@ -275,8 +275,8 @@ class TestUtils(unittest.TestCase):
         # Verify that ray.get was called with ANY task and the correct timeout
         mock_ray_get.assert_called_once_with(ANY, timeout=RAY_TASK_TIMEOUT)
         
-        # Verify that the error message was printed
-        mock_print.assert_called_with("Ray test failed with error: Test exception")
+        # Verify that the error message was logged
+        mock_logger.error.assert_called_with("Ray test failed with error: Test exception")
 
     @patch('ray.shutdown')
     @patch('ray.is_initialized')
@@ -286,15 +286,15 @@ class TestUtils(unittest.TestCase):
         mock_is_initialized.return_value = True
         
         # Call the function
-        with patch('builtins.print') as mock_print:
+        with patch('workflows.common.utils.logger') as mock_logger:
             shutdown_ray(is_kodosumi=False)
         
         # Verify that ray.shutdown was called
         mock_shutdown.assert_called_once()
         
-        # Verify that the shutdown messages were printed
-        mock_print.assert_any_call("Shutting down Ray...")
-        mock_print.assert_any_call("Ray shutdown complete.")
+        # Verify that the shutdown messages were logged
+        mock_logger.info.assert_any_call("Shutting down Ray...")
+        mock_logger.info.assert_any_call("Ray shutdown complete.")
 
     @patch('ray.shutdown')
     @patch('ray.is_initialized')

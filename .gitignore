@@ -69,3 +69,4 @@ ray_spill/
 # Kodosumi specific
 .kodosumi/
 data/ result.md
+data/

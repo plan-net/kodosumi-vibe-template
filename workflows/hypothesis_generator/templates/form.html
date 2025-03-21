@@ -1,0 +1,57 @@
+{% extends '_base.html' %}
+
+{% block main %}
+
+    <h3>Hypothesis Generator</h3>
+    <p>Generate marketing hypotheses based on brand, product, audience, and goals</p>
+    <div class="large"></div>
+
+    <form method="POST">
+        <div class="field border">
+            <label>Brand</label>
+            <input type="text" name="brand" placeholder="e.g., BMW" required>
+        </div>
+        <div class="space"></div>
+        
+        <div class="field border">
+            <label>Product</label>
+            <input type="text" name="product" placeholder="e.g., i7" required>
+        </div>
+        <div class="space"></div>
+        
+        <div class="field border">
+            <label>Target Audience</label>
+            <textarea name="audience" placeholder="e.g., high wealthy men over 50" required></textarea>
+        </div>
+        <div class="space"></div>
+        
+        <div class="field border">
+            <label>Goal</label>
+            <textarea name="goal" placeholder="e.g., convince them to consider the i7 over a BMW 7series or Mercedes-Benz S-Class" required></textarea>
+        </div>
+        <div class="space"></div>
+        
+        <div class="field border">
+            <label>Output Format</label>
+            <select name="output_format">
+                <option value="markdown" selected>Markdown (Human-readable)</option>
+                <option value="json">JSON (Agent-to-agent)</option>
+            </select>
+        </div>
+        <div class="space"></div>
+        
+        <div class="info">
+            <p>This will run a CrewAI flow that:</p>
+            <ol>
+                <li>Researches your brand, product, and audience using exa.ai</li>
+                <li>Generates up to 10 obvious marketing hypotheses</li>
+                <li>Generates up to 10 innovative out-of-the-box hypotheses</li>
+                <li>Includes references to supporting sources</li>
+            </ol>
+        </div>
+        <div class="space"></div>
+        
+        <button class="tertiary" type="submit">Generate Hypotheses</button>
+    </form>
+    
+{% endblock %}

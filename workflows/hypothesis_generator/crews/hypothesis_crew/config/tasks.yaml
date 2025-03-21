@@ -1,0 +1,176 @@
+# Tasks configuration for the Hypothesis Crew
+# This file defines the tasks performed by the agents in the hypothesis generation crew
+
+research:
+  name: "Research Brand, Product, and Audience"
+  agent: "researcher"
+  description: |
+    Conduct targeted research directly relevant to the specified brand, product, audience, and marketing goal.
+    Use the exa_search tool MULTIPLE TIMES with focused queries to gather highly relevant information.
+    
+    CRITICAL: Instead of general research into all aspects, focus specifically on information that will help generate 
+    actionable marketing hypotheses for {brand}'s {product} targeting {audience} to {goal}.
+    
+    Your research MUST focus on these specific areas:
+    1. {brand}'s current {product} marketing strategies and their effectiveness
+    2. Specific {product} features that resonate most with {audience}
+    3. {audience}'s key purchasing motivations and decision factors for {product}
+    4. Successful marketing approaches used by competitors to target similar audiences
+    5. Recent case studies showing what has/hasn't worked in marketing {product} to {audience}
+    
+    YOU MUST gather AT LEAST 8-12 HIGHLY RELEVANT sources and provide detailed content summaries for each.
+    
+    Brand: {brand}
+    Product: {product}
+    Audience: {audience}
+    Goal: {goal}
+    
+    CRITICAL INSTRUCTIONS:
+    - Create TARGETED search queries that combine multiple elements from the briefing (e.g., "{brand} {product} marketing strategies")
+    - EACH search query should have a clear purpose related directly to generating marketing hypotheses
+    - PRIORITIZE sources that provide actionable insights rather than general information
+    - For each source, you MUST include:
+       * A unique ID (e.g., S1, S2, S3) that will be referenced by other agents
+       * Exact title of the source
+       * Complete URL (not shortened or modified)
+       * Detailed summary highlighting the ACTIONABLE INSIGHTS from the source (at least 2-3 sentences)
+    - Your final summary should focus on insights directly applicable to creating marketing hypotheses
+    - You MUST use exa_search to gather CURRENT information; do not rely on your existing knowledge
+    
+    YOUR OUTPUT MUST STRICTLY FOLLOW THIS JSON FORMAT:
+    ```json
+    {
+        "summary": "A comprehensive summary (at least 200 words) connecting insights across all sources with actionable findings",
+        "sources": [
+            {
+                "id": "S1",
+                "title": "The exact title of the source",
+                "url": "The complete URL of the source",
+                "summary": "Detailed summary with actionable insights (at least 30 words)"
+            },
+            {
+                "id": "S2",
+                "title": "Another source title",
+                "url": "Another source URL",
+                "summary": "Another detailed summary with actionable insights"
+            }
+            // Include 8-12 sources total
+        ],
+        "search_queries_used": [
+            "First search query used (at least 3 words)",
+            "Second search query used",
+            "Third search query used",
+            // Include all search queries used
+        ]
+    }
+    ```
+
+  expected_output: "A JSON object containing a comprehensive research summary (min 200 words), list of at least 3 targeted search queries used, and a list of 8-12 highly relevant sources with unique IDs, titles, URLs, and detailed summaries"
+
+generate_obvious_hypotheses:
+  name: "Generate Obvious Marketing Hypotheses"
+  agent: "obvious_hypotheses_specialist"
+  description: |
+    Based on the research findings, generate 5-8 straightforward marketing hypotheses
+    for the brand, product, audience, and goal.
+    
+    These should be logical, evidence-based hypotheses that would be considered
+    obvious or traditional approaches to addressing the marketing goal.
+    
+    For each hypothesis:
+    1. Provide a clear, testable statement in the format "If we [action], then [target audience] will [desired outcome]"
+    2. Include supporting rationale explaining why this is a solid approach (at least 2-3 sentences)
+    3. CRITICAL: Cite SPECIFIC sources from the research by their exact source IDs (e.g., S1, S3, S7)
+       You MUST reference the exact source IDs from the research, not generic descriptions
+    
+    Brand: {brand}
+    Product: {product}
+    Audience: {audience}
+    Goal: {goal}
+    
+    CRITICAL INSTRUCTIONS:
+    - Generate 5-8 clearly stated, testable hypotheses
+    - Each hypothesis MUST follow the "If we [action], then [target audience] will [desired outcome]" format
+    - Each hypothesis MUST have supporting rationale (at least 2-3 sentences)
+    - Each hypothesis MUST cite at least 1-3 specific source IDs from the research (e.g., [S1, S4, S7])
+    - Ensure each hypothesis directly addresses the marketing goal
+    
+    YOUR OUTPUT MUST STRICTLY FOLLOW THIS JSON FORMAT:
+    ```json
+    {
+        "hypotheses": [
+            {
+                "hypothesis": "If we highlight BMW's sustainable manufacturing processes in marketing campaigns, then environmentally conscious luxury car buyers will be more likely to purchase BMW electric vehicles over competitors",
+                "rationale": "Environmentally conscious consumers care deeply about the complete lifecycle environmental impact of their purchases. BMW's carbon-neutral factory in Leipzig is a competitive advantage that resonates with this audience and differentiates the brand from competitors who only focus on zero emissions during vehicle use.",
+                "sources": ["S1", "S3", "S7"]
+            },
+            {
+                "hypothesis": "If we emphasize the premium interior materials made from recycled sources, then environmentally conscious luxury car buyers will perceive greater alignment between luxury and sustainability values",
+                "rationale": "Research shows that environmentally conscious luxury consumers often experience cognitive dissonance between luxury consumption and environmental values. By highlighting how BMW resolves this tension through sustainable luxury materials, we directly address this psychological barrier to purchase.",
+                "sources": ["S2", "S5"]
+            }
+            // Include 5-8 hypotheses total
+        ]
+    }
+    ```
+    
+  expected_output: "A JSON object containing 5-8 obvious marketing hypotheses, each with a hypothesis statement in 'If we...then...' format, supporting rationale (min 2-3 sentences), and specific source ID references"
+  context: ["research_task"]
+
+generate_innovative_hypotheses:
+  name: "Generate Innovative Marketing Hypotheses"
+  agent: "innovative_hypotheses_specialist"
+  description: |
+    Based on the research findings and the list of obvious hypotheses already generated,
+    develop 5-8 innovative, out-of-the-box marketing hypotheses for the brand,
+    product, audience, and goal.
+    
+    These should be creative, unexpected approaches that challenge conventional
+    thinking while still having potential to be effective.
+    
+    IMPORTANT: Review the obvious hypotheses that have already been generated
+    and ensure your innovative hypotheses take a significantly different approach.
+    
+    For each hypothesis:
+    1. Provide a clear, testable statement in the format "If we [action], then [target audience] will [desired outcome]"
+    2. Include supporting rationale explaining why this innovative approach could work (at least 2-3 sentences)
+    3. CRITICAL: Cite SPECIFIC sources from the research by their exact source IDs (e.g., S1, S3, S7)
+       You MUST reference the exact source IDs from the research, not generic descriptions
+    4. Include a detailed explanation of how this differs from the obvious approaches (at least 1-2 sentences)
+    
+    Brand: {brand}
+    Product: {product}
+    Audience: {audience}
+    Goal: {goal}
+    
+    CRITICAL INSTRUCTIONS:
+    - Generate 5-8 clearly stated, innovative, testable hypotheses
+    - Each hypothesis MUST follow the "If we [action], then [target audience] will [desired outcome]" format
+    - Each hypothesis MUST have supporting rationale (at least 2-3 sentences)
+    - Each hypothesis MUST cite at least 1-3 specific source IDs from the research (e.g., [S1, S4, S7])
+    - Each hypothesis MUST include a "difference" explanation (1-2 sentences)
+    - Ensure each hypothesis directly addresses the marketing goal in an unconventional way
+    
+    YOUR OUTPUT MUST STRICTLY FOLLOW THIS JSON FORMAT:
+    ```json
+    {
+        "hypotheses": [
+            {
+                "hypothesis": "If we create exclusive 'carbon offset credits' that BMW EV buyers can gift to others, then environmentally conscious luxury car buyers will become brand ambassadors who expand our reach beyond direct marketing",
+                "rationale": "Research shows that environmentally conscious consumers value the ability to influence others' behavior. By enabling BMW EV buyers to gift tangible environmental benefits to friends and family, we turn customers into advocates while amplifying the environmental impact of their purchase decision.",
+                "sources": ["S2", "S4", "S9"],
+                "difference": "Unlike conventional approaches that focus on the buyer's impact alone, this hypothesis leverages the social influence motivation of environmentally conscious buyers, creating a network effect that extends beyond traditional marketing reach."
+            },
+            {
+                "hypothesis": "If we develop a 'BMW Forest' program where each vehicle purchased contributes to reforestation with real-time tracking via an exclusive app, then environmentally conscious luxury car buyers will experience ongoing positive reinforcement of their purchase decision",
+                "rationale": "Research indicates that environmentally conscious consumers suffer from purchase regret without continued reinforcement of the positive impact of their choices. A real-time, personalized connection to environmental restoration addresses this need while creating an emotional bond with the brand.",
+                "sources": ["S3", "S7"],
+                "difference": "This approach moves beyond the one-time validation of an environmentally sound purchase to create an evolving relationship with the customer through continual positive reinforcement and tangible impact visualization."
+            }
+            // Include 5-8 hypotheses total
+        ]
+    }
+    ```
+    
+  expected_output: "A JSON object containing 5-8 innovative marketing hypotheses, each with a hypothesis statement in 'If we...then...' format, supporting rationale (min 2-3 sentences), specific source ID references, and explanation of how it differs from conventional approaches"
+  context: ["research_task", "generate_obvious_hypotheses_task"]

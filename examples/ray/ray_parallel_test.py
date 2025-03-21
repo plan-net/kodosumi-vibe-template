@@ -44,7 +44,6 @@ def process_insight(insight):
     """
     # Get information about the worker executing this task
     worker_id = ray.get_runtime_context().get_node_id()
-    worker_ip = ray.get_runtime_context().get_node_ip_address()
     
     # Simulate varying processing times to show asynchronous nature
     processing_time = random.uniform(0.5, 1.5)
@@ -59,7 +58,6 @@ def process_insight(insight):
         "priority": priority,
         "processed_by": f"Ray-Worker-{uuid.uuid4().hex[:8]}",
         "worker_id": worker_id,
-        "worker_ip": worker_ip,
         "processing_time": time.strftime("%Y-%m-%d %H:%M:%S"),
         "processing_duration": f"{processing_time:.2f}s",
     }

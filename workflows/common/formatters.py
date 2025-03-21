@@ -43,7 +43,7 @@ def format_as_markdown(
     template: Optional[Dict[str, Any]] = None
 ) -> str:
     """
-    Format the data as a markdown string.
+    Format the data as a markdown string with improved source tracking.
     
     Args:
         data: The data to format
@@ -70,77 +70,108 @@ def format_as_markdown(
     # Start building markdown
     markdown = f"# {title}\n\n"
     
-    # Process sections based on template or auto-generate from data
-    if template["sections"]:
-        # Use template-defined sections
-        for section in template["sections"]:
-            section_title = section["title"]
-            field_name = section["field"]
-            format_type = section.get("format", "text")
-            
-            # Add section header
-            markdown += f"## {section_title}\n"
-            
-            # Get section content
-            content = data.get(field_name)
-            
-            if content is not None:
-                if format_type == "list" and isinstance(content, list):
-                    # Format as numbered list
-                    for i, item in enumerate(content, 1):
-                        if isinstance(item, dict):
-                            # Handle dictionary items with special formatting
-                            item_text = format_dict_item(item, section.get("item_format", {}))
-                            markdown += f"{i}. {item_text}\n"
-                        else:
-                            # Simple list item
-                            markdown += f"{i}. {item}\n"
-                elif format_type == "text":
-                    # Simple text content
-                    markdown += f"{content}\n"
-                elif format_type == "dict" and isinstance(content, dict):
-                    # Format dictionary as key-value pairs
-                    for key, value in content.items():
-                        markdown += f"**{key}**: {value}\n"
-            
-            markdown += "\n"
-    else:
-        # Auto-generate sections from data
-        for key, value in data.items():
-            # Skip internal or special fields
-            if key.startswith("_") or key == template["timestamp_field"] or key == "title":
-                continue
-                
+    # Standard sections to display first
+    standard_fields = ["brand", "product", "audience", "goal", "research_summary"]
+    
+    # Process standard sections first
+    for field in standard_fields:
+        if field in data:
             # Convert snake_case to Title Case for section headers
-            section_title = " ".join(word.capitalize() for word in key.split("_"))
+            section_title = " ".join(word.capitalize() for word in field.split("_"))
+            markdown += f"## {section_title}\n{data[field]}\n\n"
+    
+    # Create source lookup if available
+    source_lookup = {}
+    sources = data.get("sources", [])
+    if sources:
+        markdown += "## Sources\n"
+        
+        for i, source in enumerate(sources, 1):
+            source_id = source.get("id", f"S{i}")
+            source_lookup[source_id] = source
+            
+            title = source.get("title", "No title available")
+            url = source.get("url", "#")
+            summary = source.get("summary", "No summary available")
+            
+            markdown += f"{i}. **[{source_id}] {title}** - [Link]({url})\n"
+            markdown += f"   *{summary}*\n\n"
+    
+    # Process hypotheses sections
+    for hypothesis_type in ["obvious_hypotheses", "innovative_hypotheses"]:
+        if hypothesis_type in data:
+            # Title for the section
+            section_title = " ".join(word.capitalize() for word in hypothesis_type.split("_"))
             markdown += f"## {section_title}\n"
             
-            if isinstance(value, list):
-                # Format lists as numbered items
-                for i, item in enumerate(value, 1):
-                    if isinstance(item, dict):
-                        # For dictionaries in lists, use the first value as the main text
-                        first_value = next(iter(item.values()), "")
-                        markdown += f"{i}. **{first_value}**"
-                        
-                        # Add other key-value pairs in parentheses
-                        other_items = [(k, v) for k, v in item.items() if v != first_value]
-                        if other_items:
-                            markdown += " ("
-                            markdown += ", ".join(f"{k}: {v}" for k, v in other_items)
-                            markdown += ")"
-                        markdown += "\n"
-                    else:
-                        markdown += f"{i}. {item}\n"
-            elif isinstance(value, dict):
-                # Format dictionaries as key-value pairs
-                for k, v in value.items():
-                    markdown += f"**{k}**: {v}\n"
-            else:
-                # Simple value
-                markdown += f"{value}\n"
+            hypotheses = data[hypothesis_type]
+            for i, hyp in enumerate(hypotheses, 1):
+                hypothesis_text = hyp.get("hypothesis", "No hypothesis provided")
+                markdown += f"{i}. **{hypothesis_text}**\n"
                 
-            markdown += "\n"
+                # Add rationale
+                if "rationale" in hyp:
+                    markdown += f"   - *Rationale*: {hyp['rationale']}\n"
+                
+                # Add properly formatted source references
+                if "sources" in hyp and hyp["sources"]:
+                    source_refs = []
+                    for src_id in hyp["sources"]:
+                        if src_id in source_lookup:
+                            source = source_lookup[src_id]
+                            title = source.get("title", "Unknown source")
+                            source_refs.append(f"[{src_id}] {title}")
+                        else:
+                            source_refs.append(f"[{src_id}]")
+                    
+                    markdown += f"   - *Sources*: {', '.join(source_refs)}\n"
+                
+                # Add difference explanation for innovative hypotheses
+                if hypothesis_type == "innovative_hypotheses" and "difference" in hyp:
+                    markdown += f"   - *Difference*: {hyp['difference']}\n"
+                
+                markdown += "\n"
+    
+    # Process any remaining non-standard fields
+    for key, value in data.items():
+        # Skip already processed fields and special fields
+        if (key in standard_fields or 
+            key in ["sources", "obvious_hypotheses", "innovative_hypotheses"] or
+            key.startswith("_") or 
+            key == template["timestamp_field"] or 
+            key == "title"):
+            continue
+            
+        # Convert snake_case to Title Case for section headers
+        section_title = " ".join(word.capitalize() for word in key.split("_"))
+        markdown += f"## {section_title}\n"
+        
+        if isinstance(value, list):
+            # Format lists as numbered items
+            for i, item in enumerate(value, 1):
+                if isinstance(item, dict):
+                    # For dictionaries in lists, use the first value as the main text
+                    first_value = next(iter(item.values()), "")
+                    markdown += f"{i}. **{first_value}**"
+                    
+                    # Add other key-value pairs in parentheses
+                    other_items = [(k, v) for k, v in item.items() if v != first_value]
+                    if other_items:
+                        markdown += " ("
+                        markdown += ", ".join(f"{k}: {v}" for k, v in other_items)
+                        markdown += ")"
+                    markdown += "\n"
+                else:
+                    markdown += f"{i}. {item}\n"
+        elif isinstance(value, dict):
+            # Format dictionaries as key-value pairs
+            for k, v in value.items():
+                markdown += f"**{k}**: {v}\n"
+        else:
+            # Simple value
+            markdown += f"{value}\n"
+            
+        markdown += "\n"
     
     # Add timestamp footer if requested
     if template["include_timestamp"]:

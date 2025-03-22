@@ -1,0 +1,37 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card mt-4">
+    <div class="card-header">
+      <h2>{{ form_title }}</h2>
+      <p class="text-muted">{{ form_description }}</p>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% for field in form_fields %}
+          <div class="mb-3">
+            <label for="{{ field.id }}" class="form-label">{{ field.label }}</label>
+            
+            {% if field.type == "select" %}
+              <select id="{{ field.id }}" name="{{ field.id }}" class="form-select">
+                {% for option in field.options %}
+                  <option value="{{ option.value }}" {% if option.value == field.default %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
+            
+            {% if field.description %}
+              <div class="form-text">{{ field.description }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+        
+        <button type="submit" class="btn btn-primary">Run Test</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} 

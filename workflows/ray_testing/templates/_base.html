@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ray Testing Workflow{% endblock %}</title>
+    
+    <!-- Use common static files -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='beer.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='kodosumi.css') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Kodosumi" height="30">
+                Ray Testing
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='beer.min.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html> 

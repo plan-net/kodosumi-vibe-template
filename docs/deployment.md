@@ -6,6 +6,22 @@ This guide explains how to deploy your CrewAI flows using Kodosumi, which provid
 - Background task processing
 - Resource management with Ray
 
+## Ray Testing Before Deployment
+
+Before deploying your workflows to Kodosumi, it's important to test them locally with Ray. The repository includes Ray example scripts that demonstrate key patterns used in Kodosumi:
+
+```bash
+# Run all Ray examples
+python examples/ray/run_all_examples.py
+```
+
+These examples help you understand:
+- How Ray remote functions work
+- How parallel processing is implemented
+- How to maintain state with Ray Actors
+
+Testing with Ray locally ensures your workflows will run properly when deployed. See [examples/ray/README.md](../examples/ray/README.md) for more information.
+
 ## Configuration
 
 Create a `config.yaml` file in your project root:
@@ -85,12 +101,6 @@ applications:
    ```
 
    The `--register` parameter is required to properly connect the Kodosumi web interface with your Ray Serve application routes.
-
-## Accessing Your Flow
-
-Your flow will be available at:
-- Local: `http://localhost:3370/example`
-- Production: `https://your-domain.com/example`
 
 ## Monitoring
 

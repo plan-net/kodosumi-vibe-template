@@ -14,9 +14,14 @@ app = ServeAPI()
 templates = Jinja2Templates(
     directory=Path(__file__).parent.joinpath("templates"))
 
+# Mount workflow-specific static files
 app.mount("/static", StaticFiles(
     directory=Path(__file__).parent.joinpath("static")), name="static")
- 
+
+# Mount common static files
+app.mount("/common/static", StaticFiles(
+    directory=Path(__file__).parent.parent.joinpath("common/static")), name="common_static")
+
 
 # Available datasets for the dropdown
 AVAILABLE_DATASETS = {

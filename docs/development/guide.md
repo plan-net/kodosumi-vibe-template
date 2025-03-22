@@ -16,6 +16,7 @@ workflows/
 ├── common/
 │   ├── formatters.py    # Output formatting utilities
 │   ├── processors.py    # Data processing utilities
+│   ├── static/          # Shared static files (CSS, JS, images)
 │   └── utils.py         # General utilities
 ├── example/
 │   ├── agents/          # Agent definitions
@@ -23,6 +24,7 @@ workflows/
 │   ├── tasks/           # Task definitions
 │   ├── tools/           # Tool definitions
 │   ├── templates/       # HTML templates for web interface
+│   ├── static/          # Workflow-specific static files
 │   ├── main.py          # Flow implementation
 │   └── serve.py         # Kodosumi service definition
 └── another_flow/        # Another workflow package
@@ -80,12 +82,21 @@ workflows/
    from fastapi import Request
    from fastapi.responses import HTMLResponse
    from fastapi.templating import Jinja2Templates
+   from fastapi.staticfiles import StaticFiles
    from ray.serve import deployment, ingress
    from kodosumi.serve import Launch, ServeAPI
    
    app = ServeAPI()
    templates = Jinja2Templates(
        directory=Path(__file__).parent.joinpath("templates"))
+   
+   # Mount workflow-specific static files (if needed)
+   app.mount("/static", StaticFiles(
+       directory=Path(__file__).parent.joinpath("static")), name="static")
+   
+   # Mount common static files
+   app.mount("/common/static", StaticFiles(
+       directory=Path(__file__).parent.parent.joinpath("common/static")), name="common_static")
    
    @deployment
    @ingress(app)
@@ -245,6 +256,29 @@ Create HTML templates for your workflow:
 </form>
 {% endblock %}
 ```
+
+### Shared Static Files
+
+The template includes a shared static files directory at `workflows/common/static` that contains common assets used across different workflows:
+
+- CSS files (Beer CSS framework and Kodosumi styles)
+- JavaScript libraries
+- Common images and icons
+
+To use these shared assets in your templates:
+
+```html
+<!-- Reference common static files in your HTML templates -->
+<link rel="icon" href="/common/static/favicon.ico" type="image/x-icon">
+<link href="/common/static/beer.css" rel="stylesheet">
+<link href="/common/static/kodosumi.css" rel="stylesheet">
+<script src="/common/static/beer.min.js"></script>
+
+<!-- Include images -->
+<img src="/common/static/logo.png" alt="Kodosumi Logo">
+```
+
+This approach prevents duplication of assets across multiple workflows and ensures consistent styling and behavior.
 
 ## Testing
 

@@ -136,12 +136,17 @@ This template includes specialized Cursor rules that provide AI-assisted develop
 ```
 workflows/
 ├── common/              # Shared utilities
+│   ├── formatters.py    # Output formatting utilities
+│   ├── processors.py    # Data processing utilities
+│   ├── static/          # Shared static files (CSS, JS, images)
+│   └── utils.py         # General utilities  
 ├── example/            # Example CrewAI flow
 │   ├── agents/         # Agent definitions
 │   ├── crews/          # Crew definitions
 │   ├── tasks/          # Task definitions
 │   ├── tools/          # Tool definitions
 │   ├── templates/      # Web interface
+│   ├── static/         # Workflow-specific static files
 │   ├── main.py         # Flow implementation
 │   └── serve.py        # Kodosumi service
 └── another_flow/       # Your custom flow

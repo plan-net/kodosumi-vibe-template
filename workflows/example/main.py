@@ -101,12 +101,7 @@ class CrewAIFlow(Flow[CrewAIFlowState]):
         """
         Analyze the input data using CrewAI.
         """
-        markdown(f"""
-## 🔍 Analysis Phase
-> *Using CrewAI to extract insights from the dataset*
-
-Beginning analysis of `{self.state.dataset_name}` dataset...
-""")
+        markdown(f"**Analyzing {self.state.dataset_name} dataset using CrewAI...**")
         logger.info(f"Using CrewAI to analyze {self.state.dataset_name}...")
         
         try:
@@ -123,28 +118,10 @@ Beginning analysis of `{self.state.dataset_name}` dataset...
             }
             
             # Create and run the crew
-            markdown(f"""
-### 🤖 Initializing Agents
-*Setting up specialized CrewAI agents for {self.state.dataset_name}*
-
-- **Dataset Name:** `{dataset["name"]}`
-- **Description:** {dataset["description"]}
-- **Sample Size:** {len(dataset["sample"])} records
-- **Analysis Mode:** Multi-agent collaboration
-""")
+            markdown(f"**Initializing agents for {self.state.dataset_name} analysis...**")
             crew_instance = FirstCrew()
             crew = crew_instance.crew()
-            markdown("""
-### 🚀 Executing Crew Tasks
-*Agents are now working on analyzing the data*
-
-This process involves multiple specialists:
-- Data Analyst examining patterns and trends
-- Customer Insights Expert identifying key themes
-- Strategy Consultant formulating recommendations
-
-> *This step may take a few moments as agents collaborate to analyze the data...*
-""")
+            markdown("**Executing crew tasks to analyze the data...**")
             crew.kickoff(inputs=task_inputs)
             
             # Extract insights from the last task output
@@ -158,33 +135,12 @@ This process involves multiple specialists:
                         insight_count = len(insights_dict.get("insights", []))
                         rec_count = len(insights_dict.get("recommendations", []))
                         
-                        markdown(f"""
-### ✅ Analysis Complete
-*Successfully extracted insights from crew output*
-
-- **Insights Found:** {insight_count}
-- **Recommendations:** {rec_count}
-- **Output Format:** Structured JSON
-- **Status:** Ready for processing
-
-*Moving to parallel processing phase...*
-""")
+                        markdown(f"**Analysis complete. Found {insight_count} insights and {rec_count} recommendations.**")
                         self.state.analysis_results = insights_dict
                         return self.process_insights_in_parallel
             
             # If we reach here, create fallback results
-            markdown(f"""
-### ⚠️ Analysis Challenge
-*Unable to extract structured insights from crew output*
-
-Analysis of `{self.state.dataset_name}` was completed, but the output couldn't be properly parsed into the expected format.
-
-**Fallback Strategy:**
-- Creating a default structure with minimal information
-- Continuing to processing stage with limited data
-
-*This may affect the quality of the final results.*
-""")
+            markdown("**Unable to extract structured insights from crew output. Creating fallback results.**")
             self.state.analysis_error = f"Unable to extract insights for {self.state.dataset_name} dataset."
             self.state.analysis_results = {
                 "summary": f"Analysis of {self.state.dataset_name} was completed, but insights extraction failed.",
@@ -194,21 +150,7 @@ Analysis of `{self.state.dataset_name}` was completed, but the output couldn't b
             
         except Exception as e:
             logger.error(f"Error analyzing data: {str(e)}")
-            markdown(f"""
-### ❌ Analysis Error
-*An error occurred during the analysis phase*
-
-**Error Details:**
-```
-{str(e)}
-```
-
-**Fallback Strategy:**
-- Creating an error report
-- Continuing to processing stage with error information
-
-*This will affect the quality of the final results.*
-""")
+            markdown(f"**Error during analysis: {str(e)}**")
             self.state.analysis_error = str(e)
             self.state.analysis_results = {
                 "summary": f"Analysis of {self.state.dataset_name} failed due to an error.",
@@ -253,28 +195,13 @@ Analysis of `{self.state.dataset_name}` was completed, but the output couldn't b
     @listen(analyze_data)
     async def process_insights_in_parallel(self):
         """Process insights in parallel."""
-        markdown("""
-## 🔄 Parallel Processing Phase
-> *Distributing insights processing across Ray workers*
-
-Processing insights from the analysis to prioritize and enrich with additional context...
-""")
+        markdown("**Processing insights in parallel...**")
         logger.info("Processing insights in parallel...")
 
         try:
             if not hasattr(self.state, 'analysis_results') or not self.state.analysis_results:
                 logger.warning("No analysis results found in state")
-                markdown("""
-### ⚠️ Processing Interrupted
-No analysis results were found to process. This could indicate an issue with the previous analysis step.
-
-**Possible causes:**
-- The analysis step did not complete successfully
-- The output format from the analysis is not as expected
-- The data source contained no valid insights
-
-*Moving to finalization with empty results...*
-""")
+                markdown("**Warning: No analysis results found to process.**")
                 self.state.parallel_processing_results = []
                 return self.finalize_results
 
@@ -288,26 +215,17 @@ No analysis results were found to process. This could indicate an issue with the
                 if insights:
                     count = len(insights)
                     logger.info(f"Processing {count} insights")
-                    markdown(f"""
-### 📊 Processing {count} Insights
-*Distributing work to Ray cluster workers*
-
-- **Dataset:** `{self.state.dataset_name}`
-- **Insights Count:** {count}
-- **Processing Mode:** Parallel (using Ray)
-- **Started At:** {time.strftime("%H:%M:%S")}
-
-> *Each insight will be evaluated independently for priority scoring and enrichment...*
-""")
+                    markdown(f"**Processing {count} insights from {self.state.dataset_name} dataset...**")
                     
-                    # Process each insight using Ray and asyncio
+                    # Process insights asynchronously
                     start_time = time.time()
                     
-                    # Submit all tasks in parallel
+                    # Create remote tasks
                     refs = [process_insight.remote(insight) for insight in insights]
                     
-                    # Use asyncio.gather with await as suggested by the error message
-                    insights_results = await asyncio.gather(*[asyncio.create_task(ray.get(ref)) for ref in refs])
+                    # Process with asyncio as suggested by Ray's warning
+                    coroutines = [asyncio.to_thread(ray.get, ref) for ref in refs]
+                    insights_results = await asyncio.gather(*coroutines)
                     
                     processing_time = time.time() - start_time
                     self.state.parallel_processing_results = insights_results
@@ -318,61 +236,21 @@ No analysis results were found to process. This could indicate an issue with the
                     low_priority = [i for i in insights_results if i.get('priority', 0) < 4]
                     
                     logger.info(f"Processed {len(insights_results)} insights")
-                    markdown(f"""
-### ✅ Processing Complete
-*All insights have been successfully prioritized*
-
-- **Total Processed:** {len(insights_results)}
-- **High Priority:** {len(high_priority)}
-- **Medium Priority:** {len(medium_priority)}
-- **Low Priority:** {len(low_priority)}
-- **Processing Time:** {processing_time:.2f} seconds
-
-*Moving to final report generation...*
-""")
+                    markdown(f"**Completed processing {len(insights_results)} insights in {processing_time:.2f} seconds.**")
                     return self.finalize_results
                 else:
                     logger.warning("Insights list is empty")
-                    markdown("""
-### ⚠️ No Insights Found
-The analysis results contain an insights key, but the list is empty.
-
-*Moving to finalization with empty results...*
-""")
+                    markdown("**Warning: Insights list is empty.**")
             else:
                 logger.warning(f"Analysis results does not contain 'insights' key")
-                markdown("""
-### ⚠️ Invalid Analysis Format
-The analysis results do not contain the expected 'insights' key.
-
-**Expected structure:**
-```json
-{
-  "summary": "Summary text...",
-  "insights": ["Insight 1", "Insight 2", ...],
-  "recommendations": ["Recommendation 1", ...]
-}
-```
-
-*Moving to finalization with empty results...*
-""")
+                markdown("**Warning: Analysis results does not contain 'insights' key.**")
             
             logger.warning("No insights to process. Using empty result set.")
             self.state.parallel_processing_results = []
             return self.finalize_results
         except Exception as e:
             logger.error(f"Error processing insights: {str(e)}")
-            markdown(f"""
-### ❌ Error During Processing
-An unexpected error occurred while processing insights.
-
-**Error Details:**
-```
-{str(e)}
-```
-
-*Moving to finalization with error information...*
-""")
+            markdown(f"**Error during processing: {str(e)}**")
             self.state.parallel_processing_results = [{"error": f"Error processing insights: {str(e)}"}]
             return self.finalize_results
 
@@ -382,12 +260,7 @@ An unexpected error occurred while processing insights.
         Final step in the flow.
         This step aggregates the results from previous steps.
         """
-        markdown("""
-## 📊 Finalization Phase
-> *Compiling and formatting the final results*
-
-Aggregating insights and generating the comprehensive report...
-""")
+        markdown("**Finalizing results and generating report...**")
         logger.info("Finalizing results...")
         
         # Get counts for better reporting
@@ -404,19 +277,7 @@ Aggregating insights and generating the comprehensive report...
         }
         
         logger.info("Flow completed successfully!")
-        markdown(f"""
-### ✨ Workflow Complete
-*Analysis and processing successfully completed*
-
-**Final Report Stats:**
-- **Dataset:** `{self.state.dataset_name}`
-- **Total Insights:** {insight_count}
-- **Recommendations:** {rec_count}
-- **Format:** {self.state.output_format.upper()}
-- **Timestamp:** {time.strftime("%Y-%m-%d %H:%M:%S")}
-
-*Thank you for using the CrewAI Insights Generator!*
-""")
+        markdown(f"**Workflow complete! Analyzed {self.state.dataset_name} dataset with {len(self.state.parallel_processing_results)} insights.**")
         
         # Format the output based on the requested format
         return format_output(self.state.final_insights, self.state.output_format)
@@ -444,17 +305,7 @@ def kickoff(inputs: dict = None):
         
         # Run the flow
         logger.info("Starting flow execution...")
-        markdown(f"""
-# 🚀 CrewAI Insights Generator
-> *Powered by Kodosumi*
-
-## Workflow Information
-- **Dataset:** `{flow.state.dataset_name}`
-- **Output Format:** {flow.state.output_format.upper()}
-- **Started At:** {time.strftime("%Y-%m-%d %H:%M:%S")}
-
-*Initializing the workflow pipeline...*
-""")
+        markdown(f"**Starting CrewAI Insights Generator for {flow.state.dataset_name} dataset in {flow.state.output_format} format.**")
         result = flow.kickoff()
         logger.info("Flow execution completed successfully")
         

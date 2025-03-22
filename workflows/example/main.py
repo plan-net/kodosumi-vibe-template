@@ -8,6 +8,7 @@ import time
 import random
 import uuid
 import re
+import asyncio
 from typing import List, Dict, Any, Optional
 
 from dotenv import load_dotenv
@@ -299,10 +300,20 @@ No analysis results were found to process. This could indicate an issue with the
 > *Each insight will be evaluated independently for priority scoring and enrichment...*
 """)
                     
-                    # Process each insight in parallel using Ray
+                    # Process each insight using Ray but retrieve results one by one
+                    # to avoid blocking the event loop in async contexts
                     start_time = time.time()
+                    
+                    # Submit all tasks in parallel
                     refs = [process_insight.remote(insight) for insight in insights]
-                    insights_results = ray.get(refs)
+                    
+                    # Get results one by one to avoid blocking the event loop for too long
+                    insights_results = []
+                    for ref in refs:
+                        # Process each result individually
+                        result = ray.get(ref)
+                        insights_results.append(result)
+                    
                     processing_time = time.time() - start_time
                     self.state.parallel_processing_results = insights_results
                     
